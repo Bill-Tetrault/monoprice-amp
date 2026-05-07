@@ -1,4 +1,4 @@
-# SETUP.md – Monoprice 10761 Amp Web Controller (test)
+# SETUP.md – Monoprice 10761 Amp Web Controller
 
 ## Prerequisites
 - Raspberry Pi running Raspberry Pi OS (64-bit recommended)
