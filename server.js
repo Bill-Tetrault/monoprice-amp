@@ -70,6 +70,11 @@ function writeConfig() {
 
 function deepMerge(dst, src) {
   for (const key of Object.keys(src)) {
+    // Prevent prototype pollution via special keys
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      continue;
+    }
+
     if (
       src[key] !== null && typeof src[key] === 'object' && !Array.isArray(src[key]) &&
       dst[key] !== null && typeof dst[key] === 'object' && !Array.isArray(dst[key])
