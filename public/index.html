@@ -3,121 +3,618 @@
 <head>
   <meta charset="utf-8">
   <title>Monoprice 10761 Controller</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root {
-      --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem; --space-5: 1.25rem; --space-6: 1.5rem;
-      --radius-sm: 0.5rem; --radius-md: 0.75rem; --radius-lg: 1rem; --radius-full: 9999px;
+      --text-xs: clamp(0.75rem, 0.72rem + 0.12vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.84rem + 0.18vw, 1rem);
+      --text-base: clamp(1rem, 0.97rem + 0.18vw, 1.0625rem);
+      --text-lg: clamp(1.125rem, 1.04rem + 0.45vw, 1.375rem);
+      --text-xl: clamp(1.45rem, 1.15rem + 1vw, 2rem);
+      --space-1: 0.25rem;
+      --space-2: 0.5rem;
+      --space-3: 0.75rem;
+      --space-4: 1rem;
+      --space-5: 1.25rem;
+      --space-6: 1.5rem;
+      --space-8: 2rem;
+      --space-10: 2.5rem;
+      --radius-sm: 0.5rem;
+      --radius-md: 0.75rem;
+      --radius-lg: 1rem;
+      --radius-xl: 1.25rem;
+      --radius-full: 9999px;
       --transition: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+      --font-body: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
+
     :root, [data-theme="light"] {
-      --bg:#f7f6f2; --surface:#fbfbf9; --surface-alt:#f3f0ec; --border:#d4d1ca; --text:#28251d; --text-muted:#7a7974;
-      --accent:#5b5cff; --accent-soft:#dfdcff; --accent-strong:#3f40d6; --warning-bg:#fff2db; --warning-border:#e2b55d; --warning-text:#6d4a00;
-      --shadow:0 10px 30px rgba(0,0,0,0.08);
+      --color-bg: #f7f6f2;
+      --color-surface: #fbfbf9;
+      --color-surface-2: #f3f0ec;
+      --color-border: #d4d1ca;
+      --color-divider: #dcd9d5;
+      --color-text: #28251d;
+      --color-text-muted: #7a7974;
+      --color-text-faint: #a8a6a1;
+      --color-primary: #01696f;
+      --color-primary-soft: #d7e6e4;
+      --color-primary-strong: #0f3638;
+      --color-warning-bg: #fff2db;
+      --color-warning-border: #e2b55d;
+      --color-warning-text: #6d4a00;
+      --color-success-bg: #dce8d2;
+      --color-success-text: #2f5b13;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-md: 0 8px 24px rgba(0,0,0,0.08);
+      --shadow-lg: 0 16px 40px rgba(0,0,0,0.12);
     }
+
     [data-theme="dark"] {
-      --bg:#0b0d18; --surface:#161a2d; --surface-alt:#1d2238; --border:#2c3251; --text:#f3f5ff; --text-muted:#98a1c5;
-      --accent:#7c73ff; --accent-soft:#2f3158; --accent-strong:#9088ff; --warning-bg:#3a2e19; --warning-border:#8a6a25; --warning-text:#f3d08b;
-      --shadow:0 10px 30px rgba(0,0,0,0.35);
+      --color-bg: #171614;
+      --color-surface: #1c1b19;
+      --color-surface-2: #23211f;
+      --color-border: #393836;
+      --color-divider: #2b2a28;
+      --color-text: #ece9e3;
+      --color-text-muted: #a4a09a;
+      --color-text-faint: #76716a;
+      --color-primary: #4f98a3;
+      --color-primary-soft: #313b3b;
+      --color-primary-strong: #7cc1cc;
+      --color-warning-bg: #3a2e19;
+      --color-warning-border: #8a6a25;
+      --color-warning-text: #f3d08b;
+      --color-success-bg: #283826;
+      --color-success-text: #a9d68c;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.22);
+      --shadow-md: 0 10px 28px rgba(0,0,0,0.35);
+      --shadow-lg: 0 18px 44px rgba(0,0,0,0.45);
     }
-    * { box-sizing:border-box; }
-    body { margin:0; font-family:system-ui,-apple-system,Segoe UI,sans-serif; background:linear-gradient(180deg, #11152a 0%, var(--bg) 140px); color:var(--text); min-height:100vh; }
-    button,input,select { font:inherit; }
-    .app { max-width:1100px; margin:0 auto; padding:1rem; }
-    .serial-banner { display:none; margin-bottom:1rem; background:var(--warning-bg); border:1px solid var(--warning-border); color:var(--warning-text); border-radius:var(--radius-md); padding:0.75rem 1rem; }
-    .header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem; }
-    .title { display:flex; align-items:flex-start; gap:0.75rem; font-weight:700; font-size:1.8rem; line-height:1.05; }
-    .title-icon { color:#b35cff; }
-    .header-actions { display:flex; align-items:center; gap:0.75rem; }
-    .pill-btn { border:1px solid var(--border); background:rgba(255,255,255,0.03); color:var(--text); border-radius:0.9rem; padding:0.8rem 1rem; box-shadow:var(--shadow); }
-    .theme-toggle { width:3rem; height:3rem; display:grid; place-items:center; }
-    .grid { display:grid; gap:1rem; grid-template-columns:1fr; }
-    @media (min-width:700px){ .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-    @media (min-width:1040px){ .grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
-    .zone-card { background:rgba(22,26,45,0.92); border:1px solid var(--border); border-radius:1.15rem; box-shadow:var(--shadow); padding:1rem; display:flex; flex-direction:column; gap:0.9rem; }
-    .zone-head { display:flex; justify-content:space-between; gap:0.75rem; align-items:center; }
-    .zone-left { display:flex; gap:0.75rem; align-items:center; min-width:0; flex:1; }
-    .icon-btn { width:2.5rem; height:2.5rem; border-radius:0.9rem; border:1px solid var(--border); background:var(--surface-alt); color:var(--text); display:grid; place-items:center; font-size:1.4rem; }
-    .zone-name-input { flex:1; min-width:0; background:transparent; border:none; color:var(--text); font-size:1.2rem; font-weight:700; }
-    .power-button { width:2.7rem; height:2.7rem; border-radius:50%; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); font-size:1.1rem; line-height:1; flex:0 0 auto; }
-    .power-on { background:var(--accent); color:white; box-shadow:0 0 0 2px rgba(124,115,255,0.22); border-color:transparent; }
-    .power-off { background:var(--surface-alt); color:var(--text-muted); }
-    .source-select, .timer-select { width:100%; background:var(--surface-alt); color:var(--text); border:1px solid var(--border); border-radius:0.8rem; padding:0.8rem 0.9rem; }
-    .volume-wrap { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:0.75rem; color:var(--text-muted); }
-    .volume-wrap input[type="range"] { width:100%; accent-color:var(--accent); }
-    .status-text { font-size:0.95rem; color:var(--text-muted); }
-    .autooff-panel { border:1px solid var(--border); background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); border-radius:1rem; padding:0.8rem; display:flex; flex-direction:column; gap:0.75rem; }
-    .row-between { display:flex; justify-content:space-between; align-items:center; gap:0.75rem; }
-    .small-label { font-size:0.86rem; color:var(--text-muted); }
-    .chip { display:inline-flex; align-items:center; gap:0.25rem; padding:0.15rem 0.45rem; border-radius:999px; font-size:0.76rem; font-weight:700; }
-    .chip-on { background:rgba(255,205,60,0.15); color:#f3c455; }
-    .chip-off { background:rgba(255,255,255,0.04); color:var(--text-muted); }
-    .toggle { width:3.2rem; height:1.9rem; border-radius:999px; padding:0.18rem; border:1px solid var(--border); background:var(--surface-alt); display:flex; align-items:center; transition:background var(--transition); }
-    .toggle-thumb { width:1.45rem; height:1.45rem; border-radius:50%; background:#d9d9e7; transition:transform var(--transition), background var(--transition); }
-    .toggle.on { background:var(--accent-soft); }
-    .toggle.on .toggle-thumb { transform:translateX(1.2rem); background:var(--accent); }
-    .advanced-button { align-self:flex-end; border:1px solid var(--border); background:var(--surface-alt); color:var(--text-muted); border-radius:0.8rem; padding:0.45rem 0.7rem; }
-    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.55); display:none; align-items:center; justify-content:center; z-index:100; padding:1rem; }
-    .modal { width:min(100%,520px); max-height:90vh; overflow:auto; background:var(--surface); border:1px solid var(--border); border-radius:1rem; padding:1rem; box-shadow:var(--shadow); }
-    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
-    .close-btn { width:2.3rem; height:2.3rem; border-radius:999px; border:1px solid var(--border); background:var(--surface-alt); color:var(--text); }
-    .field-stack { display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem; }
-    .slider-row { display:flex; flex-direction:column; gap:0.4rem; margin-bottom:0.9rem; }
-    .slider-row input[type="range"] { width:100%; accent-color:var(--accent); }
-    .emoji-pop { position:absolute; z-index:120; background:var(--surface); border:1px solid var(--border); border-radius:1rem; padding:0.6rem; display:grid; grid-template-columns:repeat(6,1fr); gap:0.35rem; box-shadow:var(--shadow); }
-    .emoji-choice { width:2.2rem; height:2.2rem; border-radius:0.7rem; border:1px solid var(--border); background:var(--surface-alt); }
+
+    * , *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-body);
+      font-size: var(--text-base);
+      line-height: 1.5;
+      color: var(--color-text);
+      background:
+        radial-gradient(circle at top, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 28%),
+        var(--color-bg);
+    }
+    button, input, select { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    input, select, button { min-height: 44px; }
+    :focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 3px;
+      border-radius: var(--radius-sm);
+    }
+
+    .app {
+      max-width: 42rem;
+      margin: 0 auto;
+      padding: var(--space-4);
+      padding-bottom: var(--space-8);
+    }
+
+    .serial-banner,
+    .error-banner {
+      display: none;
+      margin-bottom: var(--space-4);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-warning-border);
+      background: var(--color-warning-bg);
+      color: var(--color-warning-text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .error-banner {
+      border-color: #a12c7b;
+      background: color-mix(in srgb, #a12c7b 14%, var(--color-surface));
+      color: var(--color-text);
+    }
+
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 200;
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-surface);
+      color: var(--color-text);
+    }
+    .skip-link:focus { left: var(--space-3); top: var(--space-3); }
+
+    .shell {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .hero,
+    .zone-card,
+    .modal,
+    .toolbar-panel {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+    }
+
+    .hero {
+      padding: var(--space-5);
+      display: grid;
+      gap: var(--space-4);
+    }
+
+    .hero-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    .brand {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      min-width: 0;
+    }
+
+    .brand-mark {
+      flex: 0 0 auto;
+      width: 3rem;
+      height: 3rem;
+      border-radius: 0.9rem;
+      display: grid;
+      place-items: center;
+      color: var(--color-primary);
+      background: var(--color-primary-soft);
+      border: 1px solid color-mix(in srgb, var(--color-primary) 24%, var(--color-border));
+    }
+
+    .brand-copy {
+      min-width: 0;
+    }
+
+    .app-title {
+      margin: 0;
+      font-size: var(--text-xl);
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      margin: var(--space-2) 0 0;
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr 44px;
+      gap: var(--space-3);
+    }
+
+    .toolbar-panel {
+      padding: var(--space-3);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-3);
+      box-shadow: none;
+      border-radius: var(--radius-lg);
+    }
+
+    .pill-btn,
+    .icon-square,
+    .advanced-button,
+    .close-btn {
+      border: 1px solid var(--color-border);
+      background: var(--color-surface-2);
+      color: var(--color-text);
+      border-radius: var(--radius-lg);
+      padding: 0.8rem 1rem;
+      transition: background var(--transition), border-color var(--transition), transform var(--transition);
+    }
+
+    .pill-btn:active,
+    .icon-square:active,
+    .advanced-button:active,
+    .close-btn:active,
+    .power-button:active,
+    .toggle:active {
+      transform: scale(0.98);
+    }
+
+    .icon-square {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+    }
+
+    .toolbar-note {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      margin-top: var(--space-2);
+    }
+
+    .zones {
+      display: grid;
+      gap: var(--space-4);
+    }
+
+    .zone-card {
+      padding: var(--space-4);
+      display: grid;
+      gap: var(--space-4);
+    }
+
+    .zone-header {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: var(--space-3);
+      align-items: center;
+    }
+
+    .zone-icon-btn,
+    .power-button {
+      width: 48px;
+      height: 48px;
+      padding: 0;
+      border-radius: 1rem;
+      border: 1px solid var(--color-border);
+      display: grid;
+      place-items: center;
+      background: var(--color-surface-2);
+      color: var(--color-text);
+    }
+
+    .power-button {
+      border-radius: var(--radius-full);
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .power-on {
+      background: var(--color-primary);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+    }
+
+    .power-off {
+      color: var(--color-text-muted);
+    }
+
+    .zone-title-wrap {
+      min-width: 0;
+      display: grid;
+      gap: var(--space-2);
+    }
+
+    .zone-name-input,
+    .title-input,
+    .source-input,
+    .source-select,
+    .timer-select {
+      width: 100%;
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      color: var(--color-text);
+      padding: 0.82rem 0.95rem;
+    }
+
+    .zone-name-input {
+      font-size: var(--text-lg);
+      font-weight: 700;
+      padding: 0.7rem 0.85rem;
+      background: transparent;
+    }
+
+    .zone-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      flex-wrap: wrap;
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.55rem;
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: 700;
+      border: 1px solid var(--color-border);
+      background: var(--color-surface-2);
+      color: var(--color-text-muted);
+    }
+
+    .chip-on {
+      background: color-mix(in srgb, var(--color-success-bg) 88%, var(--color-surface));
+      color: var(--color-success-text);
+      border-color: color-mix(in srgb, var(--color-success-text) 22%, var(--color-border));
+    }
+
+    .card-grid {
+      display: grid;
+      gap: var(--space-3);
+    }
+
+    .label {
+      font-size: var(--text-xs);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-2);
+    }
+
+    .volume-box,
+    .autooff-panel,
+    .source-box {
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-3);
+    }
+
+    .volume-head,
+    .row-between {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    .volume-value {
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+    }
+
+    .volume-slider,
+    .slider {
+      width: 100%;
+      accent-color: var(--color-primary);
+      min-height: auto;
+      margin-top: var(--space-3);
+    }
+
+    .source-box,
+    .autooff-panel {
+      display: grid;
+      gap: var(--space-3);
+    }
+
+    .toggle {
+      width: 3.25rem;
+      min-width: 3.25rem;
+      height: 2rem;
+      min-height: 2rem;
+      padding: 0.16rem;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      display: flex;
+      align-items: center;
+      transition: background var(--transition), border-color var(--transition), transform var(--transition);
+    }
+
+    .toggle-thumb {
+      width: 1.55rem;
+      height: 1.55rem;
+      border-radius: 50%;
+      background: #d8d8d8;
+      transition: transform var(--transition), background var(--transition);
+    }
+
+    .toggle.on {
+      background: var(--color-primary-soft);
+      border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-border));
+    }
+
+    .toggle.on .toggle-thumb {
+      transform: translateX(1.18rem);
+      background: var(--color-primary);
+    }
+
+    .advanced-button {
+      width: 100%;
+      text-align: center;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.58);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-4);
+      z-index: 100;
+    }
+
+    .modal {
+      width: min(100%, 34rem);
+      max-height: 90vh;
+      overflow: auto;
+      padding: var(--space-4);
+      display: grid;
+      gap: var(--space-4);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: var(--text-lg);
+    }
+
+    .field-stack {
+      display: grid;
+      gap: var(--space-2);
+    }
+
+    .slider-block {
+      display: grid;
+      gap: var(--space-2);
+      padding: var(--space-3);
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+    }
+
+    .emoji-pop {
+      position: absolute;
+      z-index: 150;
+      width: min(19rem, calc(100vw - 2rem));
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: var(--space-2);
+      padding: var(--space-3);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .emoji-choice {
+      min-height: 44px;
+      border-radius: 0.85rem;
+      border: 1px solid var(--color-border);
+      background: var(--color-surface-2);
+      font-size: 1.2rem;
+    }
+
+    .footer-note {
+      color: var(--color-text-muted);
+      font-size: var(--text-xs);
+      text-align: center;
+      padding-bottom: var(--space-4);
+    }
+
+    @media (min-width: 720px) {
+      .app { padding: var(--space-6); }
+      .hero { padding: var(--space-6); }
+      .zone-card { padding: var(--space-5); }
+      .card-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
   </style>
 </head>
 <body>
+  <a class="skip-link" href="#mainContent">Skip to content</a>
   <div class="app">
     <div class="serial-banner" id="serialBanner"></div>
-    <header class="header">
-      <div class="title"><span class="title-icon">♫</span><span>Whole-Home<br>Audio</span></div>
-      <div class="header-actions">
-        <button class="pill-btn" id="sourcesButton">🎛️ Sources</button>
-        <button class="pill-btn theme-toggle" id="themeToggle" aria-label="Toggle theme">🌞</button>
-      </div>
-    </header>
-    <main>
-      <div class="grid" id="zonesGrid"></div>
-    </main>
-  </div>
+    <div class="error-banner" id="errorBanner"></div>
 
-  <div class="modal-backdrop" id="sourcesModalBackdrop">
-    <div class="modal">
-      <div class="modal-header">
-        <strong>Source Names</strong>
-        <button class="close-btn" id="sourcesClose" type="button">✕</button>
-      </div>
-      <div id="sourcesForm"></div>
-      <button class="pill-btn" id="sourcesSave" type="button">Save</button>
+    <div class="shell">
+      <header class="hero">
+        <div class="hero-top">
+          <div class="brand">
+            <div class="brand-mark" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="6" width="18" height="12" rx="3"></rect>
+                <path d="M7 10h4"></path>
+                <path d="M7 14h6"></path>
+                <circle cx="17" cy="12" r="1.5"></circle>
+              </svg>
+            </div>
+            <div class="brand-copy">
+              <h1 class="app-title" id="appTitle">Whole-Home Audio</h1>
+              <p class="subtitle">Single-column zone control with source labels, advanced tuning, and auto-off timers.</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="label" for="titleInput">App title</label>
+          <input class="title-input" id="titleInput" type="text" placeholder="Whole-Home Audio" maxlength="80">
+          <div class="toolbar-note">Saved in config so the header title follows your preferred room or project name.</div>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-panel">
+            <button class="pill-btn" id="sourcesButton" type="button">Edit source names</button>
+            <button class="pill-btn" id="refreshButton" type="button">Refresh all zones</button>
+          </div>
+          <button class="icon-square" id="themeToggle" type="button" aria-label="Toggle theme">◐</button>
+        </div>
+      </header>
+
+      <main id="mainContent" class="zones" aria-live="polite"></main>
+
+      <p class="footer-note">Optimized for touch-first zone control while keeping the existing amplifier command behavior intact.</p>
     </div>
   </div>
 
-  <div class="modal-backdrop" id="advancedModalBackdrop">
-    <div class="modal">
+  <div class="modal-backdrop" id="sourcesModalBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sourcesModalTitle">
       <div class="modal-header">
-        <strong id="advancedTitle">Advanced</strong>
-        <button class="close-btn" id="advancedClose" type="button">✕</button>
+        <h2 class="modal-title" id="sourcesModalTitle">Source names</h2>
+        <button class="close-btn" id="sourcesClose" type="button" aria-label="Close source names">✕</button>
       </div>
-      <div class="field-stack">
-        <label class="row-between"><span>Mute</span><button class="toggle" id="advancedMuteToggle" type="button"><span class="toggle-thumb"></span></button></label>
+      <div id="sourcesForm"></div>
+      <button class="pill-btn" id="sourcesSave" type="button">Save source names</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="advancedModalBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="advancedTitle">
+      <div class="modal-header">
+        <h2 class="modal-title" id="advancedTitle">Advanced</h2>
+        <button class="close-btn" id="advancedClose" type="button" aria-label="Close advanced settings">✕</button>
       </div>
-      <div class="slider-row">
-        <div class="row-between"><span>Max volume</span><span id="advancedMaxVolumeValue">38</span></div>
-        <input type="range" min="0" max="38" id="advancedMaxVolumeRange">
+
+      <div class="slider-block">
+        <div class="row-between">
+          <span>Mute</span>
+          <button class="toggle" id="advancedMuteToggle" type="button" aria-label="Toggle mute"><span class="toggle-thumb"></span></button>
+        </div>
       </div>
-      <div class="slider-row">
-        <div class="row-between"><span>Bass</span><span id="advancedBassValue">0</span></div>
-        <input type="range" min="0" max="14" id="advancedBassRange">
+
+      <div class="slider-block">
+        <div class="row-between"><span>Max volume</span><strong id="advancedMaxVolumeValue">38</strong></div>
+        <input class="slider" type="range" min="0" max="38" id="advancedMaxVolumeRange">
       </div>
-      <div class="slider-row">
-        <div class="row-between"><span>Treble</span><span id="advancedTrebleValue">0</span></div>
-        <input type="range" min="0" max="14" id="advancedTrebleRange">
+
+      <div class="slider-block">
+        <div class="row-between"><span>Bass</span><strong id="advancedBassValue">0</strong></div>
+        <input class="slider" type="range" min="0" max="14" id="advancedBassRange">
       </div>
-      <div class="slider-row">
-        <div class="row-between"><span>Balance</span><span id="advancedBalanceValue">Center</span></div>
-        <input type="range" min="0" max="20" id="advancedBalanceRange">
+
+      <div class="slider-block">
+        <div class="row-between"><span>Treble</span><strong id="advancedTrebleValue">0</strong></div>
+        <input class="slider" type="range" min="0" max="14" id="advancedTrebleRange">
+      </div>
+
+      <div class="slider-block">
+        <div class="row-between"><span>Balance</span><strong id="advancedBalanceValue">Center</strong></div>
+        <input class="slider" type="range" min="0" max="20" id="advancedBalanceRange">
       </div>
     </div>
   </div>
@@ -129,10 +626,17 @@
     let currentTheme = 'dark';
     let advancedZone = null;
 
-    const zonesGrid = document.getElementById('zonesGrid');
+    const timerChoices = [30, 60, 90, 120, 180, 240];
+    const emojiList = ['🍽️','🧺','🚗','🛏️','🛁','🌿','🏠','🎵','📻','🪴','🔥','🧑‍🍳','🛋️','🖥️','📚','🏖️','🌙','🚿','🏡','🎧','📺','☀️','🧒','🎤'];
+
+    const zonesGrid = document.getElementById('mainContent');
     const serialBanner = document.getElementById('serialBanner');
+    const errorBanner = document.getElementById('errorBanner');
     const themeToggle = document.getElementById('themeToggle');
     const sourcesButton = document.getElementById('sourcesButton');
+    const refreshButton = document.getElementById('refreshButton');
+    const appTitle = document.getElementById('appTitle');
+    const titleInput = document.getElementById('titleInput');
     const sourcesModalBackdrop = document.getElementById('sourcesModalBackdrop');
     const sourcesClose = document.getElementById('sourcesClose');
     const sourcesForm = document.getElementById('sourcesForm');
@@ -150,17 +654,31 @@
     const advancedBalanceRange = document.getElementById('advancedBalanceRange');
     const advancedBalanceValue = document.getElementById('advancedBalanceValue');
 
-    const emojiList = ['🍳','🧺','🚗','🛏️','🛁','🌿','🏠','🎧','🎵','📺','🍽️','🌙','🌤️','🎉','🏡','📻','🔊','🔈'];
-    const timerChoices = [30, 60, 90, 120, 180, 240];
-
     function escapeHtml(str) {
-      return String(str).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'", '&#39;');
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function showError(message) {
+      if (!message) {
+        errorBanner.style.display = 'none';
+        errorBanner.textContent = '';
+        return;
+      }
+      errorBanner.style.display = 'block';
+      errorBanner.textContent = message;
     }
 
     function ensureAutomationZone(zoneKey) {
       if (!cfg.automation) cfg.automation = { enabled: true, defaultMinutes: 120, zones: {} };
       if (!cfg.automation.zones) cfg.automation.zones = {};
-      if (!cfg.automation.zones[zoneKey]) cfg.automation.zones[zoneKey] = { enabled: false, minutes: cfg.automation.defaultMinutes || 120 };
+      if (!cfg.automation.zones[zoneKey]) {
+        cfg.automation.zones[zoneKey] = { enabled: false, minutes: cfg.automation.defaultMinutes || 120 };
+      }
       return cfg.automation.zones[zoneKey];
     }
 
@@ -172,6 +690,7 @@
       });
       if (!res.ok) throw new Error(await res.text());
       cfg = await res.json();
+      renderHeader();
       renderZones();
       return cfg;
     }
@@ -180,6 +699,7 @@
       const res = await fetch('/api/config');
       if (!res.ok) throw new Error(await res.text());
       cfg = await res.json();
+      renderHeader();
     }
 
     async function refreshSerialStatus() {
@@ -189,13 +709,14 @@
         const json = await res.json();
         if (json.online) {
           serialBanner.style.display = 'none';
+          serialBanner.textContent = '';
         } else {
           serialBanner.style.display = 'block';
-          serialBanner.innerHTML = `⚠️ <strong>Serial offline</strong> – commands will fail. Path: ${escapeHtml(json.path || 'unknown')}`;
+          serialBanner.innerHTML = `<strong>Serial offline.</strong> Commands will fail until the adapter on <code>${escapeHtml(json.path || 'unknown')}</code> is available.`;
         }
-      } catch {
+      } catch (_err) {
         serialBanner.style.display = 'block';
-        serialBanner.innerHTML = '⚠️ <strong>Serial status unavailable</strong>';
+        serialBanner.innerHTML = '<strong>Serial status unavailable.</strong>';
       }
     }
 
@@ -211,15 +732,24 @@
     }
 
     async function loadAllZoneStateStaggered() {
-      for (let z = 1; z <= 6; z++) {
-        setTimeout(() => loadZoneState(z), (z - 1) * 200);
+      for (let z = 1; z <= 6; z += 1) {
+        setTimeout(() => loadZoneState(z), (z - 1) * 180);
       }
     }
 
     function applyTheme(theme) {
       currentTheme = theme === 'light' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', currentTheme);
-      themeToggle.textContent = currentTheme === 'light' ? '🌞' : '🌙';
+      themeToggle.textContent = currentTheme === 'light' ? '☾' : '☀';
+      themeToggle.setAttribute('aria-label', currentTheme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+    }
+
+    function renderHeader() {
+      if (!cfg) return;
+      const title = (cfg.title || 'Whole-Home Audio').trim() || 'Whole-Home Audio';
+      appTitle.textContent = title;
+      titleInput.value = title;
+      document.title = `${title} • Monoprice 10761`;
     }
 
     function buildTimerSelect(zoneKey) {
@@ -234,9 +764,15 @@
         select.appendChild(option);
       });
       select.addEventListener('change', async () => {
-        const minutes = parseInt(select.value, 10) || 120;
-        automation.minutes = minutes;
-        await patchConfig({ automation: { zones: { [zoneKey]: { minutes } } } });
+        try {
+          const minutes = parseInt(select.value, 10) || 120;
+          automation.minutes = minutes;
+          await patchConfig({ automation: { zones: { [zoneKey]: { minutes } } } });
+          showError('');
+        } catch (err) {
+          showError(`Failed to save timer for zone ${zoneKey}.`);
+          console.error(err);
+        }
       });
       return select;
     }
@@ -245,7 +781,7 @@
       if (!cfg) return;
       zonesGrid.innerHTML = '';
 
-      for (let z = 1; z <= 6; z++) {
+      for (let z = 1; z <= 6; z += 1) {
         const zoneKey = String(z);
         const zoneCfg = cfg.zones?.[zoneKey] || {};
         const state = zoneState[zoneKey] || { power: false, source: 1, volume: 0, mute: false, bass: 0, treble: 0, balance: 10 };
@@ -255,54 +791,89 @@
         card.className = 'zone-card';
         card.dataset.zone = zoneKey;
 
-        const head = document.createElement('div');
-        head.className = 'zone-head';
-
-        const zoneLeft = document.createElement('div');
-        zoneLeft.className = 'zone-left';
+        const header = document.createElement('div');
+        header.className = 'zone-header';
 
         const iconBtn = document.createElement('button');
         iconBtn.type = 'button';
-        iconBtn.className = 'icon-btn';
-        iconBtn.textContent = zoneCfg.icon || '🎧';
+        iconBtn.className = 'zone-icon-btn';
+        iconBtn.textContent = zoneCfg.icon || '🎵';
+        iconBtn.setAttribute('aria-label', `Choose icon for zone ${zoneKey}`);
         iconBtn.addEventListener('click', () => openEmojiPicker(zoneKey, iconBtn));
+
+        const titleWrap = document.createElement('div');
+        titleWrap.className = 'zone-title-wrap';
 
         const zoneNameInput = document.createElement('input');
         zoneNameInput.className = 'zone-name-input';
         zoneNameInput.value = zoneCfg.name || `Zone ${zoneKey}`;
+        zoneNameInput.setAttribute('aria-label', `Zone ${zoneKey} name`);
         zoneNameInput.addEventListener('blur', async () => {
-          const name = zoneNameInput.value.trim() || `Zone ${zoneKey}`;
-          cfg.zones[zoneKey] = cfg.zones[zoneKey] || {};
-          cfg.zones[zoneKey].name = name;
-          await patchConfig({ zones: { [zoneKey]: { name } } });
+          try {
+            const name = zoneNameInput.value.trim() || `Zone ${zoneKey}`;
+            cfg.zones[zoneKey] = cfg.zones[zoneKey] || {};
+            cfg.zones[zoneKey].name = name;
+            await patchConfig({ zones: { [zoneKey]: { name } } });
+            showError('');
+          } catch (err) {
+            showError(`Failed to save zone ${zoneKey} name.`);
+            console.error(err);
+          }
         });
         zoneNameInput.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') zoneNameInput.blur(); });
 
-        zoneLeft.append(iconBtn, zoneNameInput);
+        const meta = document.createElement('div');
+        meta.className = 'zone-meta';
+
+        const powerChip = document.createElement('span');
+        powerChip.className = `chip ${state.power ? 'chip-on' : ''}`;
+        powerChip.textContent = state.power ? 'Powered' : 'Standby';
+
+        const sourceChip = document.createElement('span');
+        sourceChip.className = 'chip';
+        sourceChip.textContent = state.power ? (cfg.sourceNames?.[String(state.source)] || `Source ${state.source}`) : 'No source';
+
+        meta.append(powerChip, sourceChip);
+        titleWrap.append(zoneNameInput, meta);
 
         const powerBtn = document.createElement('button');
         powerBtn.type = 'button';
         powerBtn.className = `power-button ${state.power ? 'power-on' : 'power-off'}`;
-        powerBtn.textContent = '⏻';
+        powerBtn.textContent = state.power ? '⏻' : '⏽';
+        powerBtn.setAttribute('aria-label', `${state.power ? 'Turn off' : 'Turn on'} ${zoneCfg.name || `Zone ${zoneKey}`}`);
         powerBtn.addEventListener('click', async () => {
-          const next = !Boolean(zoneState[zoneKey]?.power);
-          const res = await fetch(`/api/zone/${zoneKey}/power`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ on: next })
-          });
-          if (!res.ok) return console.error(await res.text());
-          zoneState[zoneKey] = zoneState[zoneKey] || {};
-          zoneState[zoneKey].power = next;
-          applyZoneState(zoneKey);
+          try {
+            const next = !Boolean(zoneState[zoneKey]?.power);
+            const res = await fetch(`/api/zone/${zoneKey}/power`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ on: next })
+            });
+            if (!res.ok) throw new Error(await res.text());
+            zoneState[zoneKey] = zoneState[zoneKey] || {};
+            zoneState[zoneKey].power = next;
+            applyZoneState(zoneKey);
+            showError('');
+          } catch (err) {
+            showError(`Power command failed for zone ${zoneKey}.`);
+            console.error(err);
+          }
         });
 
-        head.append(zoneLeft, powerBtn);
-        card.appendChild(head);
+        header.append(iconBtn, titleWrap, powerBtn);
+        card.appendChild(header);
 
+        const grid = document.createElement('div');
+        grid.className = 'card-grid';
+
+        const sourceBox = document.createElement('div');
+        sourceBox.className = 'source-box';
+        const sourceLabel = document.createElement('div');
+        sourceLabel.className = 'label';
+        sourceLabel.textContent = 'Source';
         const sourceSelect = document.createElement('select');
         sourceSelect.className = 'source-select';
-        for (let s = 1; s <= 6; s++) {
+        for (let s = 1; s <= 6; s += 1) {
           const option = document.createElement('option');
           option.value = String(s);
           option.textContent = cfg.sourceNames?.[String(s)] || `Source ${s}`;
@@ -310,96 +881,116 @@
           sourceSelect.appendChild(option);
         }
         sourceSelect.addEventListener('change', async () => {
-          const source = parseInt(sourceSelect.value, 10);
-          const res = await fetch(`/api/zone/${zoneKey}/source`, {
-            method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ source })
-          });
-          if (!res.ok) return console.error(await res.text());
-          zoneState[zoneKey] = zoneState[zoneKey] || {};
-          zoneState[zoneKey].source = source;
-          applyZoneState(zoneKey);
+          try {
+            const source = parseInt(sourceSelect.value, 10);
+            const res = await fetch(`/api/zone/${zoneKey}/source`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ source })
+            });
+            if (!res.ok) throw new Error(await res.text());
+            zoneState[zoneKey] = zoneState[zoneKey] || {};
+            zoneState[zoneKey].source = source;
+            applyZoneState(zoneKey);
+            showError('');
+          } catch (err) {
+            showError(`Source change failed for zone ${zoneKey}.`);
+            console.error(err);
+          }
         });
-        card.appendChild(sourceSelect);
+        sourceBox.append(sourceLabel, sourceSelect);
 
-        const volumeWrap = document.createElement('div');
-        volumeWrap.className = 'volume-wrap';
-        const muteIcon = document.createElement('span');
-        muteIcon.textContent = state.mute ? '🔇' : '🔈';
+        const volumeBox = document.createElement('div');
+        volumeBox.className = 'volume-box';
+        const volumeHead = document.createElement('div');
+        volumeHead.className = 'volume-head';
+        const volumeLabel = document.createElement('div');
+        volumeLabel.className = 'label';
+        volumeLabel.textContent = state.mute ? 'Volume · muted' : 'Volume';
+        const volumeValue = document.createElement('div');
+        volumeValue.className = 'volume-value';
+        volumeValue.textContent = String(state.volume ?? 0);
         const volumeRange = document.createElement('input');
+        volumeRange.className = 'volume-slider';
         volumeRange.type = 'range';
         volumeRange.min = '0';
         volumeRange.max = String(zoneCfg.maxVolume ?? 38);
         volumeRange.value = String(state.volume ?? 0);
-        const volumeText = document.createElement('span');
-        volumeText.textContent = String(state.volume ?? 0);
         volumeRange.addEventListener('input', () => {
           const value = parseInt(volumeRange.value, 10) || 0;
-          volumeText.textContent = String(value);
+          volumeValue.textContent = String(value);
           zoneState[zoneKey] = zoneState[zoneKey] || {};
           zoneState[zoneKey].volume = value;
           if (volumeDebouncers[zoneKey]) clearTimeout(volumeDebouncers[zoneKey]);
           volumeDebouncers[zoneKey] = setTimeout(async () => {
-            const res = await fetch(`/api/zone/${zoneKey}/volume`, {
-              method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ volume:value })
-            });
-            if (!res.ok) return console.error(await res.text());
-          }, 300);
+            try {
+              const res = await fetch(`/api/zone/${zoneKey}/volume`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ volume: value })
+              });
+              if (!res.ok) throw new Error(await res.text());
+              showError('');
+            } catch (err) {
+              showError(`Volume change failed for zone ${zoneKey}.`);
+              console.error(err);
+            }
+          }, 280);
         });
-        volumeWrap.append(muteIcon, volumeRange, volumeText);
-        card.appendChild(volumeWrap);
+        volumeHead.append(volumeLabel, volumeValue);
+        volumeBox.append(volumeHead, volumeRange);
 
-        const statusText = document.createElement('div');
-        statusText.className = 'status-text';
-        statusText.textContent = state.power ? `▶ ${cfg.sourceNames?.[String(state.source)] || `Source ${state.source}`}` : 'Off';
-        card.appendChild(statusText);
+        grid.append(sourceBox, volumeBox);
+        card.appendChild(grid);
 
         const autoPanel = document.createElement('div');
         autoPanel.className = 'autooff-panel';
 
-        const autoRow = document.createElement('div');
-        autoRow.className = 'row-between';
+        const autoTop = document.createElement('div');
+        autoTop.className = 'row-between';
         const autoLabel = document.createElement('div');
-        autoLabel.className = 'small-label';
-        autoLabel.textContent = 'Auto-off';
-        const rightWrap = document.createElement('div');
-        rightWrap.style.display = 'flex';
-        rightWrap.style.alignItems = 'center';
-        rightWrap.style.gap = '0.5rem';
-
+        autoLabel.innerHTML = `<div class="label" style="margin-bottom:0">Auto-off</div><div style="color:var(--color-text-muted);font-size:var(--text-sm)">Per-zone sleep timer</div>`;
+        const toggleWrap = document.createElement('div');
+        toggleWrap.style.display = 'flex';
+        toggleWrap.style.alignItems = 'center';
+        toggleWrap.style.gap = '0.6rem';
         const toggle = document.createElement('button');
         toggle.type = 'button';
         toggle.className = `toggle ${automation.enabled ? 'on' : ''}`;
+        toggle.setAttribute('aria-label', `Toggle auto-off for zone ${zoneKey}`);
         toggle.innerHTML = '<span class="toggle-thumb"></span>';
-
         const stateChip = document.createElement('span');
-        stateChip.className = `chip ${automation.enabled ? 'chip-on' : 'chip-off'}`;
+        stateChip.className = `chip ${automation.enabled ? 'chip-on' : ''}`;
         stateChip.textContent = automation.enabled ? 'Enabled' : 'Disabled';
-
         toggle.addEventListener('click', async () => {
-          const enabled = !ensureAutomationZone(zoneKey).enabled;
-          ensureAutomationZone(zoneKey).enabled = enabled;
-          await patchConfig({ automation: { zones: { [zoneKey]: { enabled } } } });
+          try {
+            const enabled = !ensureAutomationZone(zoneKey).enabled;
+            ensureAutomationZone(zoneKey).enabled = enabled;
+            await patchConfig({ automation: { zones: { [zoneKey]: { enabled } } } });
+            showError('');
+          } catch (err) {
+            showError(`Failed to update auto-off for zone ${zoneKey}.`);
+            console.error(err);
+          }
         });
-
-        rightWrap.append(toggle, stateChip);
-        autoRow.append(autoLabel, rightWrap);
+        toggleWrap.append(toggle, stateChip);
+        autoTop.append(autoLabel, toggleWrap);
 
         const timerRow = document.createElement('div');
         timerRow.className = 'row-between';
         const timerLabel = document.createElement('div');
-        timerLabel.className = 'small-label';
-        timerLabel.textContent = 'Timer';
+        timerLabel.innerHTML = `<div class="label" style="margin-bottom:0">Timer</div><div style="color:var(--color-text-muted);font-size:var(--text-sm)">Reset on power, source, volume, mute, bass, treble, or balance changes</div>`;
         const timerSelect = buildTimerSelect(zoneKey);
         timerSelect.style.maxWidth = '9rem';
         timerRow.append(timerLabel, timerSelect);
 
-        autoPanel.append(autoRow, timerRow);
+        autoPanel.append(autoTop, timerRow);
         card.appendChild(autoPanel);
 
         const advancedBtn = document.createElement('button');
         advancedBtn.type = 'button';
         advancedBtn.className = 'advanced-button';
-        advancedBtn.textContent = 'Advanced';
+        advancedBtn.textContent = 'Advanced zone settings';
         advancedBtn.addEventListener('click', () => openAdvanced(zoneKey));
         card.appendChild(advancedBtn);
 
@@ -409,21 +1000,29 @@
 
     function applyZoneState(zoneKey) {
       const card = zonesGrid.querySelector(`[data-zone="${zoneKey}"]`);
-      if (!card) return;
+      if (!card || !cfg) return;
       const state = zoneState[zoneKey] || {};
       const zoneCfg = cfg.zones?.[zoneKey] || {};
       const powerBtn = card.querySelector('.power-button');
       const sourceSelect = card.querySelector('.source-select');
-      const range = card.querySelector('.volume-wrap input[type="range"]');
-      const volumeText = card.querySelector('.volume-wrap span:last-child');
-      const muteIcon = card.querySelector('.volume-wrap span:first-child');
-      const statusText = card.querySelector('.status-text');
-      if (powerBtn) powerBtn.className = `power-button ${state.power ? 'power-on' : 'power-off'}`;
+      const range = card.querySelector('.volume-slider');
+      const volumeValue = card.querySelector('.volume-value');
+      const chips = card.querySelectorAll('.chip');
+      if (powerBtn) {
+        powerBtn.className = `power-button ${state.power ? 'power-on' : 'power-off'}`;
+        powerBtn.textContent = state.power ? '⏻' : '⏽';
+      }
       if (sourceSelect && state.source != null) sourceSelect.value = String(state.source);
-      if (range) { range.max = String(zoneCfg.maxVolume ?? 38); range.value = String(state.volume ?? 0); }
-      if (volumeText) volumeText.textContent = String(state.volume ?? 0);
-      if (muteIcon) muteIcon.textContent = state.mute ? '🔇' : '🔈';
-      if (statusText) statusText.textContent = state.power ? `▶ ${cfg.sourceNames?.[String(state.source)] || `Source ${state.source}`}` : 'Off';
+      if (range) {
+        range.max = String(zoneCfg.maxVolume ?? 38);
+        range.value = String(state.volume ?? 0);
+      }
+      if (volumeValue) volumeValue.textContent = String(state.volume ?? 0);
+      if (chips[0]) {
+        chips[0].className = `chip ${state.power ? 'chip-on' : ''}`;
+        chips[0].textContent = state.power ? 'Powered' : 'Standby';
+      }
+      if (chips[1]) chips[1].textContent = state.power ? (cfg.sourceNames?.[String(state.source)] || `Source ${state.source}`) : 'No source';
     }
 
     function openEmojiPicker(zoneKey, anchor) {
@@ -435,16 +1034,22 @@
         btn.className = 'emoji-choice';
         btn.textContent = emoji;
         btn.addEventListener('click', async () => {
-          cfg.zones[zoneKey] = cfg.zones[zoneKey] || {};
-          cfg.zones[zoneKey].icon = emoji;
-          await patchConfig({ zones: { [zoneKey]: { icon: emoji } } });
-          document.body.removeChild(pop);
+          try {
+            cfg.zones[zoneKey] = cfg.zones[zoneKey] || {};
+            cfg.zones[zoneKey].icon = emoji;
+            await patchConfig({ zones: { [zoneKey]: { icon: emoji } } });
+            showError('');
+          } catch (err) {
+            showError(`Failed to save icon for zone ${zoneKey}.`);
+            console.error(err);
+          }
+          if (document.body.contains(pop)) document.body.removeChild(pop);
         });
         pop.appendChild(btn);
       });
       const rect = anchor.getBoundingClientRect();
       pop.style.top = `${rect.bottom + window.scrollY + 4}px`;
-      pop.style.left = `${rect.left + window.scrollX}px`;
+      pop.style.left = `${Math.max(16, rect.left + window.scrollX - 8)}px`;
       document.body.appendChild(pop);
       const close = (ev) => {
         if (!pop.contains(ev.target) && ev.target !== anchor) {
@@ -455,11 +1060,17 @@
       setTimeout(() => document.addEventListener('click', close), 0);
     }
 
+    function balanceLabel(v) {
+      if (v < 8) return 'Left';
+      if (v > 12) return 'Right';
+      return 'Center';
+    }
+
     function openAdvanced(zoneKey) {
       advancedZone = zoneKey;
       const zoneCfg = cfg.zones?.[zoneKey] || {};
-      const state = zoneState[zoneKey] || { mute:false, bass:0, treble:0, balance:10 };
-      advancedTitle.textContent = `Advanced – ${zoneCfg.name || `Zone ${zoneKey}`}`;
+      const state = zoneState[zoneKey] || { mute: false, bass: 0, treble: 0, balance: 10 };
+      advancedTitle.textContent = `Advanced · ${zoneCfg.name || `Zone ${zoneKey}`}`;
       advancedMuteToggle.className = `toggle ${state.mute ? 'on' : ''}`;
       advancedMuteToggle.innerHTML = '<span class="toggle-thumb"></span>';
       advancedMaxVolumeRange.value = String(zoneCfg.maxVolume ?? 38);
@@ -469,103 +1080,189 @@
       advancedTrebleRange.value = String(state.treble ?? 0);
       advancedTrebleValue.textContent = String(state.treble ?? 0);
       advancedBalanceRange.value = String(state.balance ?? 10);
-      advancedBalanceValue.textContent = balanceLabel(state.balance ?? 10);
+      advancedBalanceValue.textContent = balanceLabel(Number(state.balance ?? 10));
       advancedModalBackdrop.style.display = 'flex';
+      advancedModalBackdrop.setAttribute('aria-hidden', 'false');
     }
-
-    function balanceLabel(v) { if (v < 8) return 'Left'; if (v > 12) return 'Right'; return 'Center'; }
 
     sourcesButton.addEventListener('click', () => {
       sourcesForm.innerHTML = '';
-      for (let s = 1; s <= 6; s++) {
+      for (let s = 1; s <= 6; s += 1) {
         const wrap = document.createElement('div');
         wrap.className = 'field-stack';
         const label = document.createElement('label');
+        label.className = 'label';
         label.textContent = `Source ${s}`;
         const input = document.createElement('input');
+        input.className = 'source-input';
         input.value = cfg.sourceNames?.[String(s)] || `Source ${s}`;
         input.dataset.source = String(s);
-        input.style.padding = '0.75rem';
-        input.style.borderRadius = '0.8rem';
-        input.style.border = '1px solid var(--border)';
-        input.style.background = 'var(--surface-alt)';
-        input.style.color = 'var(--text)';
         wrap.append(label, input);
         sourcesForm.appendChild(wrap);
       }
       sourcesModalBackdrop.style.display = 'flex';
+      sourcesModalBackdrop.setAttribute('aria-hidden', 'false');
     });
 
-    sourcesClose.addEventListener('click', () => { sourcesModalBackdrop.style.display = 'none'; });
-    sourcesSave.addEventListener('click', async () => {
-      const sourceNames = {};
-      sourcesForm.querySelectorAll('input[data-source]').forEach((input) => {
-        sourceNames[input.dataset.source] = input.value.trim() || `Source ${input.dataset.source}`;
-      });
-      await patchConfig({ sourceNames });
+    refreshButton.addEventListener('click', async () => {
+      showError('');
+      await Promise.all([refreshSerialStatus(), loadAllZoneStateStaggered()]);
+    });
+
+    titleInput.addEventListener('blur', async () => {
+      try {
+        const title = titleInput.value.trim() || 'Whole-Home Audio';
+        await patchConfig({ title });
+        showError('');
+      } catch (err) {
+        showError('Failed to save app title.');
+        console.error(err);
+      }
+    });
+    titleInput.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') titleInput.blur(); });
+
+    sourcesClose.addEventListener('click', () => {
       sourcesModalBackdrop.style.display = 'none';
+      sourcesModalBackdrop.setAttribute('aria-hidden', 'true');
+    });
+
+    sourcesSave.addEventListener('click', async () => {
+      try {
+        const sourceNames = {};
+        sourcesForm.querySelectorAll('input[data-source]').forEach((input) => {
+          sourceNames[input.dataset.source] = input.value.trim() || `Source ${input.dataset.source}`;
+        });
+        await patchConfig({ sourceNames });
+        sourcesModalBackdrop.style.display = 'none';
+        sourcesModalBackdrop.setAttribute('aria-hidden', 'true');
+        showError('');
+      } catch (err) {
+        showError('Failed to save source names.');
+        console.error(err);
+      }
     });
 
     themeToggle.addEventListener('click', async () => {
-      const next = currentTheme === 'dark' ? 'light' : 'dark';
-      cfg.theme = next;
-      applyTheme(next);
-      await patchConfig({ theme: next });
+      try {
+        const next = currentTheme === 'dark' ? 'light' : 'dark';
+        cfg.theme = next;
+        applyTheme(next);
+        await patchConfig({ theme: next });
+      } catch (err) {
+        showError('Failed to save theme.');
+        console.error(err);
+      }
     });
 
     advancedClose.addEventListener('click', () => {
       advancedZone = null;
       advancedModalBackdrop.style.display = 'none';
+      advancedModalBackdrop.setAttribute('aria-hidden', 'true');
     });
 
     advancedMuteToggle.addEventListener('click', async () => {
       if (!advancedZone) return;
-      const mute = !advancedMuteToggle.classList.contains('on');
-      const res = await fetch(`/api/zone/${advancedZone}/mute`, {
-        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ mute })
-      });
-      if (!res.ok) return console.error(await res.text());
-      zoneState[advancedZone] = zoneState[advancedZone] || {};
-      zoneState[advancedZone].mute = mute;
-      advancedMuteToggle.className = `toggle ${mute ? 'on' : ''}`;
-      advancedMuteToggle.innerHTML = '<span class="toggle-thumb"></span>';
-      applyZoneState(advancedZone);
+      try {
+        const mute = !advancedMuteToggle.classList.contains('on');
+        const res = await fetch(`/api/zone/${advancedZone}/mute`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mute })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        zoneState[advancedZone] = zoneState[advancedZone] || {};
+        zoneState[advancedZone].mute = mute;
+        advancedMuteToggle.className = `toggle ${mute ? 'on' : ''}`;
+        advancedMuteToggle.innerHTML = '<span class="toggle-thumb"></span>';
+        applyZoneState(advancedZone);
+        showError('');
+      } catch (err) {
+        showError(`Mute change failed for zone ${advancedZone}.`);
+        console.error(err);
+      }
     });
 
-    advancedMaxVolumeRange.addEventListener('input', () => { advancedMaxVolumeValue.textContent = advancedMaxVolumeRange.value; });
+    advancedMaxVolumeRange.addEventListener('input', () => {
+      advancedMaxVolumeValue.textContent = advancedMaxVolumeRange.value;
+    });
     advancedMaxVolumeRange.addEventListener('change', async () => {
       if (!advancedZone) return;
-      const maxVolume = parseInt(advancedMaxVolumeRange.value, 10) || 38;
-      await patchConfig({ zones: { [advancedZone]: { maxVolume } } });
-      applyZoneState(advancedZone);
+      try {
+        const maxVolume = parseInt(advancedMaxVolumeRange.value, 10) || 38;
+        await patchConfig({ zones: { [advancedZone]: { maxVolume } } });
+        applyZoneState(advancedZone);
+        showError('');
+      } catch (err) {
+        showError(`Max volume save failed for zone ${advancedZone}.`);
+        console.error(err);
+      }
     });
 
-    advancedBassRange.addEventListener('input', () => { advancedBassValue.textContent = advancedBassRange.value; });
+    advancedBassRange.addEventListener('input', () => {
+      advancedBassValue.textContent = advancedBassRange.value;
+    });
     advancedBassRange.addEventListener('change', async () => {
       if (!advancedZone) return;
-      const bass = parseInt(advancedBassRange.value, 10) || 0;
-      const res = await fetch(`/api/zone/${advancedZone}/bass`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ bass }) });
-      if (!res.ok) return console.error(await res.text());
-      zoneState[advancedZone] = zoneState[advancedZone] || {}; zoneState[advancedZone].bass = bass;
+      try {
+        const bass = parseInt(advancedBassRange.value, 10) || 0;
+        const res = await fetch(`/api/zone/${advancedZone}/bass`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bass })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        zoneState[advancedZone] = zoneState[advancedZone] || {};
+        zoneState[advancedZone].bass = bass;
+        showError('');
+      } catch (err) {
+        showError(`Bass change failed for zone ${advancedZone}.`);
+        console.error(err);
+      }
     });
 
-    advancedTrebleRange.addEventListener('input', () => { advancedTrebleValue.textContent = advancedTrebleRange.value; });
+    advancedTrebleRange.addEventListener('input', () => {
+      advancedTrebleValue.textContent = advancedTrebleRange.value;
+    });
     advancedTrebleRange.addEventListener('change', async () => {
       if (!advancedZone) return;
-      const treble = parseInt(advancedTrebleRange.value, 10) || 0;
-      const res = await fetch(`/api/zone/${advancedZone}/treble`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ treble }) });
-      if (!res.ok) return console.error(await res.text());
-      zoneState[advancedZone] = zoneState[advancedZone] || {}; zoneState[advancedZone].treble = treble;
+      try {
+        const treble = parseInt(advancedTrebleRange.value, 10) || 0;
+        const res = await fetch(`/api/zone/${advancedZone}/treble`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ treble })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        zoneState[advancedZone] = zoneState[advancedZone] || {};
+        zoneState[advancedZone].treble = treble;
+        showError('');
+      } catch (err) {
+        showError(`Treble change failed for zone ${advancedZone}.`);
+        console.error(err);
+      }
     });
 
-    advancedBalanceRange.addEventListener('input', () => { advancedBalanceValue.textContent = balanceLabel(parseInt(advancedBalanceRange.value, 10) || 10); });
+    advancedBalanceRange.addEventListener('input', () => {
+      advancedBalanceValue.textContent = balanceLabel(parseInt(advancedBalanceRange.value, 10) || 10);
+    });
     advancedBalanceRange.addEventListener('change', async () => {
       if (!advancedZone) return;
-      const balance = parseInt(advancedBalanceRange.value, 10) || 10;
-      const res = await fetch(`/api/zone/${advancedZone}/balance`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ balance }) });
-      if (!res.ok) return console.error(await res.text());
-      zoneState[advancedZone] = zoneState[advancedZone] || {}; zoneState[advancedZone].balance = balance;
-      advancedBalanceValue.textContent = balanceLabel(balance);
+      try {
+        const balance = parseInt(advancedBalanceRange.value, 10) || 10;
+        const res = await fetch(`/api/zone/${advancedZone}/balance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ balance })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        zoneState[advancedZone] = zoneState[advancedZone] || {};
+        zoneState[advancedZone].balance = balance;
+        advancedBalanceValue.textContent = balanceLabel(balance);
+        showError('');
+      } catch (err) {
+        showError(`Balance change failed for zone ${advancedZone}.`);
+        console.error(err);
+      }
     });
 
     async function bootstrap() {
@@ -574,11 +1271,12 @@
         applyTheme(cfg.theme || 'dark');
         renderZones();
         await loadAllZoneStateStaggered();
-        setInterval(() => loadConfig().then(() => renderZones()).catch(console.error), 60000);
+        setInterval(() => loadConfig().then(renderZones).catch(console.error), 60000);
         setInterval(loadAllZoneStateStaggered, 30000);
         setInterval(refreshSerialStatus, 5000);
       } catch (err) {
         console.error('Bootstrap failed', err);
+        showError('Startup failed. Check browser console and backend logs.');
       }
     }
 
