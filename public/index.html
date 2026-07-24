@@ -1,306 +1,1243 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" data-theme="dark">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Whole-Home Audio</title>
-<style>
-:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3250;--accent:#6c63ff;--accent-glow:#6c63ff44;--on-green:#22c55e;--on-glow:#22c55e33;--text:#e2e8f0;--text-muted:#94a3b8;--warning:#f59e0b;--radius:14px;--shadow:0 4px 24px rgba(0,0,0,.35);--transition:.2s ease}
-[data-theme="light"]{--bg:#f0f4f8;--surface:#fff;--surface2:#e8edf3;--border:#cbd5e1;--accent:#4f46e5;--accent-glow:#4f46e522;--text:#1e293b;--text-muted:#64748b;--shadow:0 4px 24px rgba(0,0,0,.12)}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-button,input,select{font:inherit} button{cursor:pointer;border:none;background:none;color:inherit}
-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;box-shadow:var(--shadow)}
-.header-title{font-size:1.2rem;font-weight:700;display:flex;gap:.5rem;align-items:center}
-.header-actions{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end}
-.btn-icon{padding:.5rem .75rem;border-radius:10px;background:var(--surface2);border:1px solid var(--border);min-height:44px}
-.grid{display:grid;grid-template-columns:1fr;gap:1rem;padding:1rem;max-width:1200px;margin:0 auto}
-@media(min-width:650px){.grid{grid-template-columns:repeat(2,1fr)}}
-@media(min-width:980px){.grid{grid-template-columns:repeat(3,1fr)}}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;display:flex;flex-direction:column;gap:.8rem;box-shadow:var(--shadow)}
-.card.powered{border-color:var(--on-green);box-shadow:0 0 0 2px var(--on-glow),var(--shadow)}
-.card-header{display:flex;align-items:center;gap:.6rem}
-.zone-icon-btn,.power-btn{display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:var(--surface2);-webkit-tap-highlight-color:transparent;touch-action:manipulation}
-.zone-icon-btn{width:2.9rem;height:2.9rem;min-width:44px;min-height:44px;border-radius:12px;font-size:1.7rem;flex-shrink:0}
-.zone-name-input{flex:1;min-width:0;background:transparent;border:none;color:var(--text);font-size:1rem;font-weight:650;padding:.2rem 0;border-bottom:2px solid transparent;outline:none}
-.zone-name-input:focus{border-color:var(--accent)}
-.power-btn{width:2.7rem;height:2.7rem;min-width:44px;min-height:44px;border-radius:999px;flex-shrink:0;color:var(--text)}
-.power-btn svg{display:block;width:18px;height:18px;stroke:currentColor;pointer-events:none}
-.power-btn.on{background:var(--on-green);border-color:var(--on-green);color:#04130a;box-shadow:0 0 12px var(--on-glow)}
-.zone-source,.timer-select,.modal-input{width:100%;padding:.5rem .65rem;border-radius:9px;background:var(--surface2);border:1px solid var(--border);color:var(--text);outline:none;min-height:44px}
-.zone-source:focus,.timer-select:focus,.modal-input:focus{border-color:var(--accent)}
-.vol-row,.autooff-row{display:flex;align-items:center;gap:.6rem}
-.vol-label,.mini-label{font-size:.76rem;color:var(--text-muted);min-width:2.3rem}
-input[type=range]{flex:1;-webkit-appearance:none;height:4px;border-radius:3px;background:var(--surface2);outline:none}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
-.vol-num{font-size:.85rem;font-weight:700;color:var(--accent);min-width:2rem;text-align:right}
-.status-chip,.autooff-chip{font-size:.75rem;padding:.25rem .6rem;border-radius:999px;width:fit-content;background:var(--surface2);color:var(--text-muted);min-height:24px;display:inline-flex;align-items:center}
-.status-chip.on{background:var(--on-glow);color:var(--on-green);font-weight:700}
-.autooff-block{display:flex;flex-direction:column;gap:.45rem;padding:.75rem;border-radius:12px;background:linear-gradient(180deg,var(--surface2),transparent);border:1px solid var(--border)}
-.toggle{position:relative;width:46px;height:28px;border-radius:999px;background:var(--border);flex-shrink:0}
-.toggle::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform var(--transition)}
-.toggle.on{background:var(--accent)}
-.toggle.on::after{transform:translateX(18px)}
-.autooff-chip.enabled{background:#f59e0b22;color:var(--warning);font-weight:700}
-.emoji-picker{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:.75rem;display:grid;grid-template-columns:repeat(6,1fr);gap:.4rem;box-shadow:var(--shadow);z-index:80;width:220px}
-.emoji-picker.mobile-sheet{left:12px!important;right:12px!important;bottom:12px!important;top:auto!important;width:auto;grid-template-columns:repeat(5,1fr);padding:1rem;border-radius:18px;box-shadow:0 20px 40px rgba(0,0,0,.45)}
-.hidden{display:none!important}
-.emoji-opt{font-size:1.45rem;padding:.5rem;border-radius:10px;min-height:44px;display:flex;align-items:center;justify-content:center}
-.emoji-opt:hover{background:var(--surface2)}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:1rem;z-index:60}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem;width:min(100%,420px);box-shadow:var(--shadow)}
-.modal h2{margin-bottom:1rem;font-size:1.05rem}
-.modal-row{display:flex;gap:.75rem;align-items:center;margin-bottom:.75rem}
-.modal-row label{width:5rem;font-size:.85rem;color:var(--text-muted)}
-.modal-actions{display:flex;justify-content:flex-end;gap:.75rem;margin-top:.75rem}
-.btn-primary,.btn-secondary{padding:.55rem 1rem;border-radius:9px;min-height:44px}
-.btn-primary{background:var(--accent);color:#fff;font-weight:700}
-.btn-secondary{background:var(--surface2);border:1px solid var(--border)}
-#offline-banner{display:none;background:#f59e0b;color:#111;padding:.45rem;text-align:center;font-size:.85rem;font-weight:700}
-#offline-banner.visible{display:block}
-@media(max-width:520px){header{align-items:flex-start}.header-actions{gap:.4rem}.card{padding:.95rem}.card-header{gap:.55rem}.zone-name-input{font-size:.98rem}}
-</style>
+  <meta charset="utf-8">
+  <title>Monoprice 10761 Controller</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root {
+      --text-xs:   clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm:   clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg:   clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl:   clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+
+      --space-1:  0.25rem;
+      --space-2:  0.5rem;
+      --space-3:  0.75rem;
+      --space-4:  1rem;
+      --space-5:  1.25rem;
+      --space-6:  1.5rem;
+      --space-8:  2rem;
+      --space-10: 2.5rem;
+      --space-12: 3rem;
+      --space-16: 4rem;
+
+      --radius-sm: 0.375rem;
+      --radius-md: 0.5rem;
+      --radius-lg: 0.75rem;
+      --radius-full: 9999px;
+
+      --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    :root, [data-theme="light"] {
+      --bg: #f7f6f2;
+      --surface: #fbfbf9;
+      --surface-alt: #f3f0ec;
+      --surface-deep: #e6e4df;
+      --border: #d4d1ca;
+      --text: #28251d;
+      --text-muted: #7a7974;
+      --accent: #01696f;
+      --accent-soft: #cedcd8;
+      --accent-strong: #0c4e54;
+      --danger: #a12c7b;
+      --warning-bg: #fff2db;
+      --warning-border: #e2b55d;
+      --warning-text: #6d4a00;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    [data-theme="dark"] {
+      --bg: #171614;
+      --surface: #1c1b19;
+      --surface-alt: #22211f;
+      --surface-deep: #2d2c2a;
+      --border: #393836;
+      --text: #cdccca;
+      --text-muted: #797876;
+      --accent: #4f98a3;
+      --accent-soft: #313b3b;
+      --accent-strong: #227f8b;
+      --danger: #d163a7;
+      --warning-bg: #3a2e19;
+      --warning-border: #8a6a25;
+      --warning-text: #f3d08b;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    *,*::before,*::after {
+      box-sizing:border-box;
+      margin:0;
+      padding:0;
+    }
+
+    html {
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height:100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: var(--text-base);
+      line-height:1.5;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    button {
+      font: inherit;
+      color: inherit;
+      border: none;
+      background: none;
+      cursor: pointer;
+      transition: background-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+    }
+
+    input, select {
+      font: inherit;
+      color: inherit;
+    }
+
+    .app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--space-6) var(--space-4);
+      display:flex;
+      flex-direction:column;
+      gap:var(--space-4);
+    }
+
+    .serial-banner {
+      display:none;
+      background: var(--warning-bg);
+      border: 1px solid var(--warning-border);
+      color: var(--warning-text);
+      border-radius: var(--radius-md);
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--text-sm);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .serial-banner strong {
+      font-weight: 700;
+    }
+
+    .header {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:var(--space-4);
+      margin-bottom:var(--space-2);
+    }
+
+    .title {
+      font-size:var(--text-xl);
+      font-weight:600;
+      display:flex;
+      align-items:center;
+      gap:var(--space-2);
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size:var(--text-xs);
+      padding:0 var(--space-2);
+      border-radius:var(--radius-full);
+      background:var(--surface-alt);
+      color:var(--text-muted);
+    }
+
+    .header-actions {
+      display:flex;
+      align-items:center;
+      gap:var(--space-2);
+    }
+
+    .theme-toggle {
+      width:2.5rem;
+      height:2.5rem;
+      border-radius:var(--radius-full);
+      background:var(--surface);
+      box-shadow:var(--shadow-sm);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:var(--accent);
+    }
+
+    .theme-toggle:hover {
+      background:var(--accent-soft);
+      transform:translateY(-1px);
+    }
+
+    .sources-button {
+      padding:0.5rem 0.75rem;
+      border-radius:var(--radius-md);
+      background:var(--surface);
+      box-shadow:var(--shadow-sm);
+      font-size:var(--text-sm);
+      display:flex;
+      align-items:center;
+      gap:0.5rem;
+    }
+
+    .sources-button:hover {
+      background:var(--accent-soft);
+      color:var(--accent-strong);
+    }
+
+    .grid {
+      display:grid;
+      gap:var(--space-4);
+    }
+
+    @media (min-width:600px) {
+      .grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    }
+
+    @media (min-width:900px) {
+      .grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    }
+
+    .zone-card {
+      background:var(--surface);
+      border-radius:var(--radius-lg);
+      box-shadow:var(--shadow-md);
+      padding:var(--space-4);
+      display:flex;
+      flex-direction:column;
+      gap:var(--space-3);
+      position:relative;
+    }
+
+    .zone-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:var(--space-3);
+    }
+
+    .zone-main {
+      display:flex;
+      flex-direction:column;
+      gap:var(--space-3);
+    }
+
+    .zone-icon-button {
+      width:2.25rem;
+      height:2.25rem;
+      border-radius:var(--radius-full);
+      background:var(--surface-alt);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:1.5rem;
+    }
+
+    .zone-icon-button:hover {
+      background:var(--accent-soft);
+    }
+
+    .zone-name-input {
+      border:none;
+      background:transparent;
+      border-bottom:1px solid var(--border);
+      padding:0.25rem 0;
+      font-size:var(--text-lg);
+      font-weight:500;
+      min-width:0;
+    }
+
+    .zone-name-input:focus-visible {
+      outline:none;
+      border-bottom-color:var(--accent);
+    }
+
+    .zone-controls {
+      display:flex;
+      flex-wrap:wrap;
+      gap:var(--space-2);
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .power-button {
+      width:2.25rem;
+      height:2.25rem;
+      border-radius:var(--radius-full);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border:1px solid var(--border);
+    }
+
+    .power-on {
+      background:var(--accent);
+      color:#fff;
+      box-shadow:0 0 0 2px var(--accent-soft);
+      border-color:transparent;
+    }
+
+    .power-off {
+      background:var(--surface-alt);
+      color:var(--text-muted);
+    }
+
+    .source-select {
+      padding:0.35rem 0.5rem;
+      border-radius:var(--radius-md);
+      border:1px solid var(--border);
+      background:var(--surface-alt);
+      font-size:var(--text-sm);
+      max-width: 100%;
+    }
+
+    .volume-row {
+      display:flex;
+      align-items:center;
+      gap:var(--space-2);
+    }
+
+    .volume-row input[type="range"] {
+      flex:1;
+    }
+
+    .volume-value {
+      font-size:var(--text-sm);
+      color:var(--text-muted);
+      min-width:2.5rem;
+      text-align:right;
+    }
+
+    .status-chip {
+      display:inline-flex;
+      align-items:center;
+      gap:0.35rem;
+      padding:0.25rem 0.5rem;
+      border-radius:var(--radius-full);
+      background:var(--surface-alt);
+      font-size:var(--text-xs);
+      color:var(--text-muted);
+    }
+
+    .status-chip.on {
+      background:var(--accent-soft);
+      color:var(--accent-strong);
+    }
+
+    .status-dot {
+      width:0.4rem;
+      height:0.4rem;
+      border-radius:var(--radius-full);
+      background:var(--accent);
+    }
+
+    .status-dot.off {
+      background:var(--border);
+    }
+
+    .advanced-button {
+      font-size:var(--text-xs);
+      padding:0.25rem 0.5rem;
+      border-radius:var(--radius-md);
+      background:var(--surface-alt);
+      color:var(--text-muted);
+      align-self:flex-end;
+    }
+
+    .advanced-button:hover {
+      background:var(--accent-soft);
+      color:var(--accent-strong);
+    }
+
+    .modal-backdrop {
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.5);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+    }
+
+    .modal {
+      background:var(--surface);
+      border-radius:var(--radius-lg);
+      box-shadow:var(--shadow-md);
+      padding:var(--space-4);
+      max-width:480px;
+      width:100%;
+      max-height:90vh;
+      overflow:auto;
+    }
+
+    @media (max-width:600px) {
+      .modal {
+        border-radius:0;
+        max-width:100%;
+        max-height:100vh;
+      }
+    }
+
+    .modal-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:var(--space-3);
+    }
+
+    .modal-title {
+      font-size:var(--text-lg);
+      font-weight:600;
+    }
+
+    .modal-close {
+      width:2rem;
+      height:2rem;
+      border-radius:var(--radius-full);
+      background:var(--surface-alt);
+    }
+
+    .modal-close:hover {
+      background:var(--accent-soft);
+    }
+
+    .modal-section {
+      margin-bottom:var(--space-3);
+    }
+
+    .modal-section h3 {
+      font-size:var(--text-sm);
+      font-weight:600;
+      margin-bottom:var(--space-2);
+    }
+
+    .toggle-row {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .toggle-label {
+      font-size:var(--text-sm);
+    }
+
+    .toggle {
+      width:2.5rem;
+      height:1.5rem;
+      border-radius:var(--radius-full);
+      background:var(--surface-alt);
+      padding:0.1rem;
+      box-shadow:var(--shadow-sm);
+      display:flex;
+      align-items:center;
+    }
+
+    .toggle-thumb {
+      width:1.1rem;
+      height:1.1rem;
+      border-radius:var(--radius-full);
+      background:var(--border);
+      transform:translateX(0);
+      transition:transform var(--transition-fast), background-color var(--transition-fast);
+    }
+
+    .toggle.on {
+      background:var(--accent-soft);
+    }
+
+    .toggle.on .toggle-thumb {
+      transform:translateX(1rem);
+      background:var(--accent);
+    }
+
+    .slider-row {
+      display:flex;
+      flex-direction:column;
+      gap:var(--space-1);
+      margin-bottom:var(--space-2);
+    }
+
+    .slider-label {
+      display:flex;
+      justify-content:space-between;
+      font-size:var(--text-xs);
+      color:var(--text-muted);
+    }
+
+    .slider-label span:first-child {
+      font-weight:500;
+      color:var(--text);
+    }
+
+    .slider-row input[type="range"] {
+      width:100%;
+    }
+
+    .slider-center-button {
+      font-size:var(--text-xs);
+      align-self:flex-end;
+      padding:0.15rem 0.5rem;
+      border-radius:var(--radius-full);
+      background:var(--surface-alt);
+      color:var(--text-muted);
+    }
+
+    .slider-center-button:hover {
+      background:var(--accent-soft);
+      color:var(--accent-strong);
+    }
+
+    .max-volume-note {
+      font-size:var(--text-xs);
+      color:var(--text-muted);
+      margin-top:var(--space-1);
+    }
+  </style>
 </head>
 <body>
-<div id="offline-banner">⚠️ Serial port offline – amp commands will fail</div>
-<header>
-  <div class="header-title">🎵 Whole-Home Audio</div>
-  <div class="header-actions">
-    <button class="btn-icon" id="sources-btn" type="button">🎛 Sources</button>
-    <button class="btn-icon" id="theme-btn" type="button">🌙</button>
-  </div>
-</header>
-<div class="grid" id="zone-grid"></div>
-<div class="emoji-picker hidden" id="emoji-picker"></div>
-<div class="modal-overlay hidden" id="sources-modal">
+<div class="app">
+  <div class="serial-banner" id="serialBanner"></div>
+
+  <header class="header">
+    <div class="title">
+      <span>Monoprice 6‑Zone Amp</span>
+      <span class="badge">RS‑232 Web Controller</span>
+    </div>
+    <div class="header-actions">
+      <button class="sources-button" id="sourcesButton">🎛 Sources</button>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">🌙</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="grid" id="zonesGrid"></div>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="sourcesModalBackdrop" style="display:none;">
   <div class="modal">
-    <h2>🎛 Source Names</h2>
-    <div id="source-inputs"></div>
-    <div class="modal-actions">
-      <button class="btn-secondary" id="sources-cancel" type="button">Cancel</button>
-      <button class="btn-primary" id="sources-save" type="button">Save</button>
+    <div class="modal-header">
+      <div class="modal-title">Source Names</div>
+      <button class="modal-close" id="sourcesClose" type="button">✕</button>
+    </div>
+    <div class="modal-section">
+      <p style="font-size:var(--text-sm); color:var(--text-muted); margin-bottom:var(--space-3);">
+        Rename your sources. Changes sync to all devices.
+      </p>
+      <div id="sourcesForm" style="display:flex; flex-direction:column; gap:var(--space-2);"></div>
+      <button id="sourcesSave" class="sources-button" type="button" style="margin-top:var(--space-3); align-self:flex-end;">Save</button>
     </div>
   </div>
 </div>
+
+<div class="modal-backdrop" id="advancedModalBackdrop" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="advancedTitle">Advanced settings</div>
+      <button class="modal-close" id="advancedClose" type="button">✕</button>
+    </div>
+
+    <div class="modal-section">
+      <h3>Mute & Max Volume</h3>
+      <div class="toggle-row">
+        <span class="toggle-label">Mute</span>
+        <button class="toggle" id="advancedMuteToggle" type="button"><div class="toggle-thumb"></div></button>
+      </div>
+      <div class="slider-row" style="margin-top:var(--space-2);">
+        <div class="slider-label">
+          <span>Max volume cap</span>
+          <span id="advancedMaxVolumeValue">38</span>
+        </div>
+        <input type="range" min="0" max="38" id="advancedMaxVolumeRange">
+        <div class="max-volume-note">Zone volume will be limited to this value.</div>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <h3>Tone & Balance</h3>
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>Bass</span>
+          <span id="advancedBassValue">0</span>
+        </div>
+        <input type="range" min="0" max="14" id="advancedBassRange">
+        <button class="slider-center-button" id="advancedBassCenter" type="button">Center</button>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>Treble</span>
+          <span id="advancedTrebleValue">0</span>
+        </div>
+        <input type="range" min="0" max="14" id="advancedTrebleRange">
+        <button class="slider-center-button" id="advancedTrebleCenter" type="button">Center</button>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>Balance</span>
+          <span id="advancedBalanceValue">Center</span>
+        </div>
+        <input type="range" min="0" max="20" id="advancedBalanceRange">
+        <button class="slider-center-button" id="advancedBalanceCenter" type="button">Center</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-'use strict';
-const EMOJI_LIST=['🛋️','🍳','🛏️','💻','🌿','🏠','🎵','📺','🎸','🎹','🛁','🏋️','🌞','🌙','🍽️','🔊','🎤','🏡','🌊','🎮','📚','🎨','🌸','🧑‍🍳','🍕','☕','🪴','🎧','🔥','🚿'];
-const ZONES=[1,2,3,4,5,6], TIMER_CHOICES=[30,60,90,120,180,240], POLL_AMP_MS=30000, POLL_CFG_MS=60000, VOL_DEBOUNCE_MS=300;
-let cfg={}, ampState={}, volTimers={}, pickerZone=null;
-const picker=document.getElementById('emoji-picker');
+  let cfg = null;
+  const zoneState = {};
+  const volumeDebouncers = {};
+  let currentTheme = 'dark';
+  let advancedZone = null;
 
-async function apiFetch(method,path,body){
-  const opts={method,headers:{'Content-Type':'application/json'}};
-  if(body!==undefined) opts.body=JSON.stringify(body);
-  const res=await fetch(path,opts);
-  if(!res.ok){const err=await res.json().catch(()=>({error:res.statusText})); throw new Error(err.error||res.statusText);}
-  return res.json();
-}
+  const zonesGrid = document.getElementById('zonesGrid');
+  const serialBanner = document.getElementById('serialBanner');
+  const themeToggle = document.getElementById('themeToggle');
+  const sourcesButton = document.getElementById('sourcesButton');
+  const sourcesModalBackdrop = document.getElementById('sourcesModalBackdrop');
+  const sourcesClose = document.getElementById('sourcesClose');
+  const sourcesForm = document.getElementById('sourcesForm');
+  const sourcesSave = document.getElementById('sourcesSave');
 
-async function patchConfig(slice){ cfg=await apiFetch('PATCH','/api/config',slice); }
-function applyTheme(theme){ document.documentElement.dataset.theme=theme; document.getElementById('theme-btn').textContent=theme==='dark'?'🌞':'🌙'; }
-function escHtml(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function fmtRemaining(ms){ if(ms==null) return 'Disabled'; const total=Math.ceil(ms/60000); const h=Math.floor(total/60), m=total%60; return h?`${h}h ${m}m left`:`${m}m left`; }
-function getZoneCfg(zone){ return (cfg.zones||{})[zone]||{name:`Zone ${zone}`,icon:'🔊'}; }
-function getZoneAutomationCfg(zone){ const a=cfg.automation||{}; const z=(a.zones||{})[zone]||{}; return {enabled:!!(a.enabled&&z.enabled), idleMinutes:z.idleMinutes||a.defaultIdleMinutes||120}; }
-function buildSourceOptions(selected){ return [1,2,3,4,5,6].map(s=>`<option value="${s}"${s===selected?' selected':''}>${escHtml((cfg.sourceNames||{})[s]||`Source ${s}`)}</option>`).join(''); }
-function buildTimerOptions(selected){ return TIMER_CHOICES.map(m=>`<option value="${m}"${m===selected?' selected':''}>${m} min</option>`).join(''); }
+  const advancedModalBackdrop = document.getElementById('advancedModalBackdrop');
+  const advancedTitle = document.getElementById('advancedTitle');
+  const advancedClose = document.getElementById('advancedClose');
+  const advancedMuteToggle = document.getElementById('advancedMuteToggle');
+  const advancedMaxVolumeRange = document.getElementById('advancedMaxVolumeRange');
+  const advancedMaxVolumeValue = document.getElementById('advancedMaxVolumeValue');
+  const advancedBassRange = document.getElementById('advancedBassRange');
+  const advancedBassValue = document.getElementById('advancedBassValue');
+  const advancedBassCenter = document.getElementById('advancedBassCenter');
+  const advancedTrebleRange = document.getElementById('advancedTrebleRange');
+  const advancedTrebleValue = document.getElementById('advancedTrebleValue');
+  const advancedTrebleCenter = document.getElementById('advancedTrebleCenter');
+  const advancedBalanceRange = document.getElementById('advancedBalanceRange');
+  const advancedBalanceValue = document.getElementById('advancedBalanceValue');
+  const advancedBalanceCenter = document.getElementById('advancedBalanceCenter');
 
-function bindCardEvents(zone){
-  document.getElementById(`power-${zone}`).addEventListener('click', async ()=>{
-    const cur=!!(ampState[zone]&&ampState[zone].power);
-    await sendPower(zone,!cur);
+  async function patchConfig(slice) {
+    try {
+      const res = await fetch('/api/config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(slice)
+      });
+
+      if (!res.ok) {
+        console.error('PATCH /api/config failed', await res.text());
+        return false;
+      }
+
+      const json = await res.json();
+      cfg = json;
+      renderZones();
+      return true;
+    } catch (err) {
+      console.error('Error patching config', err);
+      return false;
+    }
+  }
+
+  async function bootstrap() {
+    await Promise.all([loadConfig(), refreshSerialStatus()]);
+    applyTheme((cfg && cfg.theme) || 'dark');
+    renderZones();
+    await loadAllZoneStateStaggered();
+
+    setInterval(loadConfigAndRerender, 60000);
+    setInterval(loadAllZoneStateStaggered, 30000);
+    setInterval(refreshSerialStatus, 5000);
+  }
+
+  async function loadConfigAndRerender() {
+    await loadConfig();
+    renderZones();
+  }
+
+  async function loadConfig() {
+    try {
+      const res = await fetch('/api/config');
+      if (!res.ok) {
+        console.error('Failed to load config', await res.text());
+        return;
+      }
+      cfg = await res.json();
+    } catch (err) {
+      console.error('Failed to load config', err);
+    }
+  }
+
+  async function refreshSerialStatus() {
+    try {
+      const res = await fetch('/api/serial-status');
+      if (!res.ok) {
+        serialBanner.style.display = 'block';
+        serialBanner.innerHTML = '⚠️ <strong>Serial status unavailable</strong> – cannot confirm amp connectivity.';
+        return;
+      }
+
+      const json = await res.json();
+      if (json.online) {
+        serialBanner.style.display = 'none';
+      } else {
+        const detail = json.lastError ? ` Last error: ${escapeHtml(json.lastError)}` : '';
+        serialBanner.style.display = 'block';
+        serialBanner.innerHTML = `⚠️ <strong>Serial port offline</strong> – amp commands will fail. Path: ${escapeHtml(json.path || 'unknown')}.${detail}`;
+      }
+    } catch (err) {
+      serialBanner.style.display = 'block';
+      serialBanner.innerHTML = '⚠️ <strong>Serial status unavailable</strong> – cannot confirm amp connectivity.';
+    }
+  }
+
+  async function loadZoneState(zone) {
+    try {
+      const res = await fetch(`/api/state?zone=${zone}`);
+      if (!res.ok) {
+        console.error('Failed to get state for zone', zone, await res.text());
+        return;
+      }
+      const json = await res.json();
+      zoneState[String(zone)] = json;
+      applyZoneState(String(zone));
+    } catch (err) {
+      console.error('Error loading zone state', zone, err);
+    }
+  }
+
+  async function loadAllZoneStateStaggered() {
+    for (let z = 1; z <= 6; z++) {
+      setTimeout(() => loadZoneState(z), (z - 1) * 200);
+    }
+  }
+
+  function applyTheme(theme) {
+    currentTheme = theme === 'light' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    themeToggle.textContent = currentTheme === 'light' ? '🌞' : '🌙';
+  }
+
+  function renderZones() {
+    if (!cfg) return;
+
+    zonesGrid.innerHTML = '';
+
+    for (let z = 1; z <= 6; z++) {
+      const zoneKey = String(z);
+      const zoneCfg = cfg.zones[zoneKey] || {};
+      const card = document.createElement('div');
+      card.className = 'zone-card';
+      card.dataset.zone = zoneKey;
+
+      const header = document.createElement('div');
+      header.className = 'zone-header';
+
+      const left = document.createElement('div');
+      left.style.display = 'flex';
+      left.style.alignItems = 'center';
+      left.style.gap = 'var(--space-2)';
+      left.style.minWidth = '0';
+      left.style.flex = '1';
+
+      const iconBtn = document.createElement('button');
+      iconBtn.className = 'zone-icon-button';
+      iconBtn.type = 'button';
+      iconBtn.textContent = zoneCfg.icon || '🎧';
+      iconBtn.addEventListener('click', () => openEmojiPicker(zoneKey, iconBtn));
+
+      const nameInput = document.createElement('input');
+      nameInput.className = 'zone-name-input';
+      nameInput.value = zoneCfg.name || `Zone ${zoneKey}`;
+      nameInput.setAttribute('aria-label', `Zone ${zoneKey} name`);
+      nameInput.addEventListener('blur', async () => {
+        const newName = nameInput.value.trim() || `Zone ${zoneKey}`;
+        cfg.zones[zoneKey] = cfg.zones[zoneKey] || {};
+        cfg.zones[zoneKey].name = newName;
+        await patchConfig({ zones: { [zoneKey]: { name: newName } } });
+      });
+      nameInput.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') nameInput.blur();
+      });
+
+      left.appendChild(iconBtn);
+      left.appendChild(nameInput);
+
+      const statusChip = document.createElement('div');
+      statusChip.className = 'status-chip';
+      const dot = document.createElement('div');
+      dot.className = 'status-dot off';
+      const label = document.createElement('span');
+      label.textContent = 'Off';
+      statusChip.appendChild(dot);
+      statusChip.appendChild(label);
+
+      header.appendChild(left);
+      header.appendChild(statusChip);
+      card.appendChild(header);
+
+      const main = document.createElement('div');
+      main.className = 'zone-main';
+
+      const controlsRow = document.createElement('div');
+      controlsRow.className = 'zone-controls';
+
+      const powerBtn = document.createElement('button');
+      powerBtn.className = 'power-button power-off';
+      powerBtn.type = 'button';
+      powerBtn.textContent = '⏻';
+      powerBtn.setAttribute('aria-label', `Toggle power for zone ${zoneKey}`);
+      powerBtn.addEventListener('click', async () => {
+        const current = zoneState[zoneKey]?.power || false;
+        const target = !current;
+        try {
+          const res = await fetch(`/api/zone/${zoneKey}/power`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ on: target })
+          });
+          if (!res.ok) {
+            console.error('Power change failed', await res.text());
+            await refreshSerialStatus();
+            return;
+          }
+          zoneState[zoneKey] = zoneState[zoneKey] || {};
+          zoneState[zoneKey].power = target;
+          applyZoneState(zoneKey);
+          await refreshSerialStatus();
+        } catch (err) {
+          console.error('Power change error', err);
+          await refreshSerialStatus();
+        }
+      });
+
+      const sourceSelect = document.createElement('select');
+      sourceSelect.className = 'source-select';
+      sourceSelect.setAttribute('aria-label', `Select source for zone ${zoneKey}`);
+
+      for (let s = 1; s <= 6; s++) {
+        const opt = document.createElement('option');
+        opt.value = String(s);
+        opt.textContent = cfg.sourceNames[String(s)] || `Source ${s}`;
+        sourceSelect.appendChild(opt);
+      }
+
+      sourceSelect.addEventListener('change', async () => {
+        const source = parseInt(sourceSelect.value, 10);
+        try {
+          const res = await fetch(`/api/zone/${zoneKey}/source`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source })
+          });
+          if (!res.ok) {
+            console.error('Source change failed', await res.text());
+            await refreshSerialStatus();
+            return;
+          }
+          zoneState[zoneKey] = zoneState[zoneKey] || {};
+          zoneState[zoneKey].source = source;
+          applyZoneState(zoneKey);
+          await refreshSerialStatus();
+        } catch (err) {
+          console.error('Source change error', err);
+          await refreshSerialStatus();
+        }
+      });
+
+      controlsRow.appendChild(powerBtn);
+      controlsRow.appendChild(sourceSelect);
+      main.appendChild(controlsRow);
+
+      const volumeRow = document.createElement('div');
+      volumeRow.className = 'volume-row';
+
+      const volRange = document.createElement('input');
+      volRange.type = 'range';
+      volRange.min = '0';
+      volRange.max = '38';
+      volRange.value = zoneState[zoneKey]?.volume ?? 0;
+      volRange.setAttribute('aria-label', `Volume for zone ${zoneKey}`);
+
+      const volValue = document.createElement('div');
+      volValue.className = 'volume-value';
+      volValue.textContent = zoneState[zoneKey]?.volume ?? 0;
+
+      volRange.addEventListener('input', () => {
+        const v = parseInt(volRange.value, 10) || 0;
+        volValue.textContent = String(v);
+        zoneState[zoneKey] = zoneState[zoneKey] || {};
+        zoneState[zoneKey].volume = v;
+
+        if (volumeDebouncers[zoneKey]) {
+          clearTimeout(volumeDebouncers[zoneKey]);
+        }
+
+        volumeDebouncers[zoneKey] = setTimeout(async () => {
+          try {
+            const res = await fetch(`/api/zone/${zoneKey}/volume`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ volume: v })
+            });
+            if (!res.ok) {
+              console.error('Volume change failed', await res.text());
+              await refreshSerialStatus();
+              return;
+            }
+            const result = await res.json();
+            zoneState[zoneKey].volume = result.volume;
+            applyZoneState(zoneKey);
+            await refreshSerialStatus();
+          } catch (err) {
+            console.error('Volume change error', err);
+            await refreshSerialStatus();
+          }
+        }, 300);
+      });
+
+      volumeRow.appendChild(volRange);
+      volumeRow.appendChild(volValue);
+      main.appendChild(volumeRow);
+      card.appendChild(main);
+
+      const footerRow = document.createElement('div');
+      footerRow.style.display = 'flex';
+      footerRow.style.justifyContent = 'space-between';
+      footerRow.style.alignItems = 'center';
+      footerRow.style.marginTop = 'var(--space-2)';
+
+      footerRow.appendChild(statusChip);
+
+      const advancedBtn = document.createElement('button');
+      advancedBtn.className = 'advanced-button';
+      advancedBtn.type = 'button';
+      advancedBtn.textContent = 'Advanced';
+      advancedBtn.addEventListener('click', () => openAdvancedModal(zoneKey));
+      footerRow.appendChild(advancedBtn);
+
+      card.appendChild(footerRow);
+      zonesGrid.appendChild(card);
+
+      applyZoneState(zoneKey);
+    }
+  }
+
+  function applyZoneState(zoneKey) {
+    const state = zoneState[zoneKey];
+    const card = zonesGrid.querySelector(`.zone-card[data-zone="${zoneKey}"]`);
+    if (!state || !card || !cfg) return;
+
+    const powerBtn = card.querySelector('.power-button');
+    const statusChip = card.querySelector('.status-chip');
+    const dot = statusChip.querySelector('.status-dot');
+    const label = statusChip.querySelector('span:nth-child(2)');
+    const sourceSelect = card.querySelector('.source-select');
+    const volRange = card.querySelector('.volume-row input[type="range"]');
+    const volValue = card.querySelector('.volume-value');
+
+    const on = !!state.power;
+    powerBtn.className = 'power-button ' + (on ? 'power-on' : 'power-off');
+    dot.className = 'status-dot ' + (on ? '' : 'off');
+    statusChip.className = 'status-chip ' + (on ? 'on' : '');
+
+    if (on) {
+      const sourceName = cfg.sourceNames[String(state.source)] || `Source ${state.source}`;
+      label.textContent = `▶ ${sourceName}`;
+    } else {
+      label.textContent = 'Off';
+    }
+
+    if (typeof state.source === 'number' && sourceSelect) {
+      sourceSelect.value = String(state.source);
+    }
+
+    if (typeof state.volume === 'number') {
+      volRange.value = String(state.volume);
+      volValue.textContent = String(state.volume);
+    }
+  }
+
+  const emojiList = ['🛋️','🍳','🛏️','💻','🌿','🏠','🎧','🎵','📺','🎹','🎸','🎷','🎺','🎻','🥁','📻','🔊','🔈','🏡','🏕️','🏙️','🏖️','⛰️','🎉','🎊','🍷','🍺','🍹','☕','🍽️'];
+
+  function openEmojiPicker(zoneKey, button) {
+    const menu = document.createElement('div');
+    menu.style.position = 'absolute';
+    menu.style.zIndex = '40';
+    menu.style.background = 'var(--surface)';
+    menu.style.borderRadius = 'var(--radius-md)';
+    menu.style.boxShadow = 'var(--shadow-md)';
+    menu.style.padding = 'var(--space-2)';
+    menu.style.display = 'grid';
+    menu.style.gridTemplateColumns = 'repeat(6, 1fr)';
+    menu.style.gap = '0.25rem';
+
+    emojiList.forEach((emoji) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = emoji;
+      btn.style.fontSize = '1.25rem';
+      btn.style.width = '2rem';
+      btn.style.height = '2rem';
+      btn.style.borderRadius = 'var(--radius-md)';
+      btn.addEventListener('click', async () => {
+        cfg.zones[String(zoneKey)] = cfg.zones[String(zoneKey)] || {};
+        cfg.zones[String(zoneKey)].icon = emoji;
+        button.textContent = emoji;
+        await patchConfig({ zones: { [zoneKey]: { icon: emoji } } });
+        if (document.body.contains(menu)) document.body.removeChild(menu);
+      });
+      menu.appendChild(btn);
+    });
+
+    const rect = button.getBoundingClientRect();
+    menu.style.top = `${rect.bottom + window.scrollY + 4}px`;
+    menu.style.left = `${rect.left + window.scrollX}px`;
+
+    document.body.appendChild(menu);
+
+    const onClickOutside = (ev) => {
+      if (!menu.contains(ev.target) && ev.target !== button) {
+        if (document.body.contains(menu)) document.body.removeChild(menu);
+        document.removeEventListener('click', onClickOutside);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', onClickOutside), 0);
+  }
+
+  sourcesButton.addEventListener('click', () => {
+    if (!cfg) return;
+    sourcesForm.innerHTML = '';
+
+    for (let s = 1; s <= 6; s++) {
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.gap = 'var(--space-2)';
+
+      const label = document.createElement('span');
+      label.style.fontSize = 'var(--text-sm)';
+      label.textContent = `Source ${s}`;
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.style.flex = '1';
+      input.value = cfg.sourceNames[String(s)] || `Source ${s}`;
+      input.dataset.source = String(s);
+
+      row.appendChild(label);
+      row.appendChild(input);
+      sourcesForm.appendChild(row);
+    }
+
+    sourcesModalBackdrop.style.display = 'flex';
   });
-  document.getElementById(`icon-btn-${zone}`).addEventListener('click', e=>openEmojiPicker(zone,e.currentTarget));
-  const nameInput=document.getElementById(`name-${zone}`);
-  const saveName=()=>{
-    const name=nameInput.value.trim()||`Zone ${zone}`;
-    cfg.zones ||= {}; cfg.zones[zone] ||= {}; cfg.zones[zone].name=name;
-    patchConfig({zones:{[zone]:{name}}}).catch(console.error);
-  };
-  nameInput.addEventListener('blur', saveName);
-  nameInput.addEventListener('keydown', e=>{ if(e.key==='Enter') nameInput.blur(); });
-  document.getElementById(`src-${zone}`).addEventListener('change', async e=>sendSource(zone,parseInt(e.target.value,10)));
-  document.getElementById(`vol-${zone}`).addEventListener('input', e=>{
-    const vol=parseInt(e.target.value,10);
-    const n=document.getElementById(`volnum-${zone}`);
-    if(n) n.textContent=String(vol);
-    clearTimeout(volTimers[zone]);
-    volTimers[zone]=setTimeout(()=>sendVolume(zone,vol),VOL_DEBOUNCE_MS);
+
+  sourcesClose.addEventListener('click', () => {
+    sourcesModalBackdrop.style.display = 'none';
   });
-  document.getElementById(`auto-toggle-${zone}`).addEventListener('click', ()=>toggleAutoOff(zone));
-  document.getElementById(`timer-${zone}`).addEventListener('change', e=>setAutoOffMinutes(zone,parseInt(e.target.value,10)));
-}
 
-function buildCard(zone){
-  const zCfg=getZoneCfg(zone);
-  const state=ampState[zone]||{power:false,source:1,volume:0,automation:{enabled:false,idleMinutes:120,remainingMs:null}};
-  const autoCfg=getZoneAutomationCfg(zone);
-  const card=document.createElement('div');
-  card.className=`card${state.power?' powered':''}`;
-  card.id=`card-${zone}`;
-  card.innerHTML=`<div class="card-header"><button class="zone-icon-btn" id="icon-btn-${zone}" type="button">${zCfg.icon}</button><input class="zone-name-input" id="name-${zone}" value="${escHtml(zCfg.name)}" maxlength="24" aria-label="Zone name"><button class="power-btn${state.power?' on':''}" id="power-${zone}" aria-pressed="${state.power}" type="button"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 2v10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path><path d="M7.05 4.93a8 8 0 1 0 9.9 0" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path></svg></button></div><select class="zone-source" id="src-${zone}">${buildSourceOptions(state.source)}</select><div class="vol-row"><span class="vol-label">🔈</span><input type="range" id="vol-${zone}" min="0" max="38" value="${state.volume}"><span class="vol-num" id="volnum-${zone}">${state.volume}</span></div><span class="status-chip${state.power?' on':''}" id="chip-${zone}">${state.power?`▶ ${escHtml((cfg.sourceNames||{})[state.source]||`Source ${state.source}`)}`:'Off'}</span><div class="autooff-block"><div class="autooff-row"><span class="mini-label">Auto-off</span><button class="toggle${autoCfg.enabled?' on':''}" id="auto-toggle-${zone}" aria-pressed="${autoCfg.enabled}" type="button"></button><span class="autooff-chip${autoCfg.enabled?' enabled':''}" id="auto-chip-${zone}">${autoCfg.enabled?fmtRemaining(state.automation&&state.automation.remainingMs):'Disabled'}</span></div><div class="autooff-row"><span class="mini-label">Timer</span><select class="timer-select" id="timer-${zone}" ${autoCfg.enabled?'':'disabled'}>${buildTimerOptions(autoCfg.idleMinutes)}</select></div></div>`;
-  return card;
-}
-
-function renderInitialGrid(){
-  const grid=document.getElementById('zone-grid');
-  grid.innerHTML='';
-  ZONES.forEach(z=>{
-    const card=buildCard(z);
-    grid.appendChild(card);
-    bindCardEvents(z);
+  sourcesSave.addEventListener('click', async () => {
+    const slice = { sourceNames: {} };
+    const inputs = sourcesForm.querySelectorAll('input[data-source]');
+    inputs.forEach((input) => {
+      const key = input.dataset.source;
+      const val = input.value.trim() || `Source ${key}`;
+      slice.sourceNames[key] = val;
+      cfg.sourceNames[key] = val;
+    });
+    await patchConfig(slice);
+    sourcesModalBackdrop.style.display = 'none';
   });
-}
 
-function syncConfigToVisibleUI(nextCfg){
-  ZONES.forEach(zone=>{
-    const nameEl=document.getElementById(`name-${zone}`), iconEl=document.getElementById(`icon-btn-${zone}`), srcEl=document.getElementById(`src-${zone}`), timerEl=document.getElementById(`timer-${zone}`), toggleEl=document.getElementById(`auto-toggle-${zone}`), chipEl=document.getElementById(`auto-chip-${zone}`);
-    const z=(nextCfg.zones||{})[zone]||{};
-    const auto=((nextCfg.automation||{}).zones||{})[zone]||{};
-    const enabled=!!((nextCfg.automation||{}).enabled && auto.enabled);
-    if(nameEl && document.activeElement!==nameEl) nameEl.value=z.name||`Zone ${zone}`;
-    if(iconEl) iconEl.textContent=z.icon||'🔊';
-    if(srcEl) srcEl.innerHTML=buildSourceOptions(ampState[zone] ? ampState[zone].source : 1);
-    if(timerEl && auto.idleMinutes) timerEl.value=String(auto.idleMinutes);
-    if(timerEl) timerEl.disabled=!enabled;
-    if(toggleEl){ toggleEl.classList.toggle('on',enabled); toggleEl.setAttribute('aria-pressed',String(enabled)); }
-    if(chipEl && !(ampState[zone]&&ampState[zone].automation&&ampState[zone].automation.enabled)){
-      chipEl.textContent=enabled?'Waiting for activity':'Disabled';
-      chipEl.className=`autooff-chip${enabled?' enabled':''}`;
+  themeToggle.addEventListener('click', async () => {
+    if (!cfg) return;
+    const next = currentTheme === 'dark' ? 'light' : 'dark';
+    cfg.theme = next;
+    applyTheme(next);
+    await patchConfig({ theme: next });
+  });
+
+  function openAdvancedModal(zoneKey) {
+    advancedZone = zoneKey;
+    const zoneCfg = cfg.zones[zoneKey] || {};
+    const state = zoneState[zoneKey] || {};
+
+    advancedTitle.textContent = `Advanced – ${zoneCfg.name || `Zone ${zoneKey}`}`;
+
+    const isMuted = !!state.mute;
+    advancedMuteToggle.classList.toggle('on', isMuted);
+
+    const mv = typeof zoneCfg.maxVolume === 'number' ? zoneCfg.maxVolume : 38;
+    advancedMaxVolumeRange.value = String(mv);
+    advancedMaxVolumeValue.textContent = String(mv);
+
+    const bass = typeof state.bass === 'number' ? state.bass : 0;
+    const treble = typeof state.treble === 'number' ? state.treble : 0;
+    advancedBassRange.value = String(bass);
+    advancedBassValue.textContent = String(bass);
+    advancedTrebleRange.value = String(treble);
+    advancedTrebleValue.textContent = String(treble);
+
+    const balance = typeof state.balance === 'number' ? state.balance : 10;
+    advancedBalanceRange.value = String(balance);
+    advancedBalanceValue.textContent = balanceLabel(balance);
+
+    advancedModalBackdrop.style.display = 'flex';
+  }
+
+  advancedClose.addEventListener('click', () => {
+    advancedZone = null;
+    advancedModalBackdrop.style.display = 'none';
+  });
+
+  advancedMuteToggle.addEventListener('click', async () => {
+    if (!advancedZone) return;
+    const currentOn = advancedMuteToggle.classList.contains('on');
+    const next = !currentOn;
+
+    try {
+      const res = await fetch(`/api/zone/${advancedZone}/mute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mute: next })
+      });
+
+      if (!res.ok) {
+        console.error('Mute change failed', await res.text());
+        await refreshSerialStatus();
+        return;
+      }
+
+      advancedMuteToggle.classList.toggle('on', next);
+      zoneState[advancedZone] = zoneState[advancedZone] || {};
+      zoneState[advancedZone].mute = next;
+      await refreshSerialStatus();
+    } catch (err) {
+      console.error('Mute change error', err);
+      await refreshSerialStatus();
     }
   });
-}
 
-function applyZoneState(zone,state){
-  ampState[zone]=state;
-  const card=document.getElementById(`card-${zone}`); if(!card) return;
-  card.classList.toggle('powered',!!state.power);
-  const powerBtn=document.getElementById(`power-${zone}`), src=document.getElementById(`src-${zone}`), vol=document.getElementById(`vol-${zone}`), volNum=document.getElementById(`volnum-${zone}`), chip=document.getElementById(`chip-${zone}`), auto=document.getElementById(`auto-chip-${zone}`), timer=document.getElementById(`timer-${zone}`), toggle=document.getElementById(`auto-toggle-${zone}`);
-  if(powerBtn){ powerBtn.classList.toggle('on',!!state.power); powerBtn.setAttribute('aria-pressed',String(!!state.power)); }
-  if(src && String(src.value)!==String(state.source)) src.value=String(state.source);
-  if(vol && String(vol.value)!==String(state.volume)) vol.value=String(state.volume);
-  if(volNum) volNum.textContent=String(state.volume);
-  if(chip){ chip.className=`status-chip${state.power?' on':''}`; chip.textContent=state.power?`▶ ${(cfg.sourceNames||{})[state.source]||`Source ${state.source}`}`:'Off'; }
-  const enabled=!!(state.automation&&state.automation.enabled);
-  if(auto){ auto.className=`autooff-chip${enabled?' enabled':''}`; auto.textContent=enabled?fmtRemaining(state.automation.remainingMs):'Disabled'; }
-  if(timer){ timer.disabled=!enabled; if(state.automation&&state.automation.idleMinutes) timer.value=String(state.automation.idleMinutes); }
-  if(toggle){ toggle.classList.toggle('on',enabled); toggle.setAttribute('aria-pressed',String(enabled)); }
-}
-
-async function fetchZoneState(zone){
-  try{ const s=await apiFetch('GET',`/api/state?zone=${zone}`); applyZoneState(zone,s); }
-  catch(e){ console.warn(`[zone ${zone}] state fetch failed:`,e.message); }
-}
-
-async function pollAmpState(){ ZONES.forEach((z,i)=>setTimeout(()=>fetchZoneState(z),i*200)); }
-async function pollConfig(){ try{ const fresh=await apiFetch('GET','/api/config'); cfg=fresh; applyTheme(cfg.theme); syncConfigToVisibleUI(cfg); }catch(e){ console.warn('[config] poll failed:',e.message); } }
-async function checkHealth(){ try{ const h=await apiFetch('GET','/api/health'); document.getElementById('offline-banner').classList.toggle('visible', !h.serialOpen); }catch(_e){} }
-
-async function sendPower(zone,on){ try{ const r=await apiFetch('POST',`/api/zone/${zone}/power`,{on}); applyZoneState(zone,{...(ampState[zone]||{}),power:r.power,automation:r.automation}); }catch(e){ console.error(e.message); } }
-async function sendSource(zone,source){ try{ const r=await apiFetch('POST',`/api/zone/${zone}/source`,{source}); applyZoneState(zone,{...(ampState[zone]||{}),source,automation:r.automation}); }catch(e){ console.error(e.message); } }
-async function sendVolume(zone,volume){ if(ampState[zone] && Number(ampState[zone].volume)===Number(volume)) return; try{ const r=await apiFetch('POST',`/api/zone/${zone}/volume`,{volume}); applyZoneState(zone,{...(ampState[zone]||{}),volume:r.volume,automation:r.automation}); }catch(e){ console.error(e.message); } }
-
-async function toggleAutoOff(zone){
-  cfg.automation ||= {enabled:true,defaultIdleMinutes:120,zones:{}};
-  cfg.automation.enabled=true; cfg.automation.zones ||= {};
-  const cur=getZoneAutomationCfg(zone);
-  cfg.automation.zones[zone]={enabled:!cur.enabled,idleMinutes:cur.idleMinutes||120};
-  syncConfigToVisibleUI(cfg);
-  try{ await patchConfig({automation:{enabled:true,zones:{[zone]:cfg.automation.zones[zone]}}}); await fetchZoneState(zone); }catch(e){ console.error(e.message); }
-}
-
-async function setAutoOffMinutes(zone,idleMinutes){
-  cfg.automation ||= {enabled:true,defaultIdleMinutes:120,zones:{}};
-  cfg.automation.enabled=true; cfg.automation.zones ||= {};
-  const cur=getZoneAutomationCfg(zone);
-  cfg.automation.zones[zone]={enabled:cur.enabled,idleMinutes};
-  syncConfigToVisibleUI(cfg);
-  try{ await patchConfig({automation:{enabled:true,zones:{[zone]:{enabled:cur.enabled,idleMinutes}}}}); await fetchZoneState(zone); }catch(e){ console.error(e.message); }
-}
-
-function openEmojiPicker(zone,anchor){
-  pickerZone=zone;
-  picker.innerHTML=EMOJI_LIST.map(e=>`<button class="emoji-opt" type="button" data-emoji="${e}">${e}</button>`).join('');
-  picker.classList.remove('hidden');
-  const mobile = window.innerWidth <= 520 || matchMedia('(hover: none)').matches;
-  picker.classList.toggle('mobile-sheet', mobile);
-  if (mobile) {
-    picker.style.left='12px'; picker.style.right='12px'; picker.style.top='auto'; picker.style.bottom='12px';
-    return;
-  }
-  const rect=anchor.getBoundingClientRect();
-  let top=rect.bottom+window.scrollY+6, left=rect.left+window.scrollX;
-  if(left+220>window.innerWidth) left=window.innerWidth-228;
-  if(top+220>window.innerHeight+window.scrollY) top=rect.top+window.scrollY-230;
-  picker.style.right='auto'; picker.style.bottom='auto'; picker.style.top=top+'px'; picker.style.left=left+'px';
-}
-
-picker.addEventListener('click', async e=>{
-  const btn=e.target.closest('.emoji-opt');
-  if(!btn || pickerZone===null) return;
-  const zone=pickerZone, icon=btn.dataset.emoji;
-  cfg.zones ||= {}; cfg.zones[zone] ||= {}; cfg.zones[zone].icon=icon;
-  const iconBtn=document.getElementById(`icon-btn-${zone}`); if(iconBtn) iconBtn.textContent=icon;
-  picker.classList.add('hidden'); picker.classList.remove('mobile-sheet'); pickerZone=null;
-  try{ await patchConfig({zones:{[zone]:{icon}}}); }catch(err){ console.error(err.message); }
-});
-
-document.addEventListener('click', e=>{
-  if(!picker.classList.contains('hidden') && !picker.contains(e.target) && !e.target.closest('.zone-icon-btn')){
-    picker.classList.add('hidden'); picker.classList.remove('mobile-sheet'); pickerZone=null;
-  }
-});
-
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ picker.classList.add('hidden'); picker.classList.remove('mobile-sheet'); pickerZone=null; } });
-
-function openSourcesModal(){
-  const c=document.getElementById('source-inputs');
-  c.innerHTML=[1,2,3,4,5,6].map(s=>`<div class="modal-row"><label for="src-name-${s}">Source ${s}</label><input class="modal-input" id="src-name-${s}" value="${escHtml((cfg.sourceNames||{})[s]||`Source ${s}`)}" maxlength="24"></div>`).join('');
-  document.getElementById('sources-modal').classList.remove('hidden');
-}
-
-document.getElementById('sources-save').addEventListener('click', async ()=>{
-  const names={};
-  [1,2,3,4,5,6].forEach(s=>names[s]=document.getElementById(`src-name-${s}`).value.trim()||`Source ${s}`);
-  cfg.sourceNames={...(cfg.sourceNames||{}),...names};
-  syncConfigToVisibleUI(cfg);
-  try{ await patchConfig({sourceNames:names}); }catch(e){ console.error(e.message); }
-  document.getElementById('sources-modal').classList.add('hidden');
-});
-
-document.getElementById('sources-cancel').addEventListener('click', ()=>document.getElementById('sources-modal').classList.add('hidden'));
-document.getElementById('sources-modal').addEventListener('click', e=>{ if(e.target.id==='sources-modal') e.target.classList.add('hidden'); });
-
-async function init(){
-  try{ cfg=await apiFetch('GET','/api/config'); }
-  catch(e){ console.error(e.message); cfg={theme:'dark',sourceNames:{},zones:{},automation:{enabled:true,defaultIdleMinutes:120,zones:{6:{enabled:true,idleMinutes:120}}}}; }
-  applyTheme(cfg.theme || 'dark');
-  renderInitialGrid();
-  document.getElementById('theme-btn').addEventListener('click', async ()=>{
-    const next=(cfg.theme==='dark')?'light':'dark';
-    cfg.theme=next; applyTheme(next);
-    try{ await patchConfig({theme:next}); }catch(e){ console.error(e.message); }
+  advancedMaxVolumeRange.addEventListener('input', () => {
+    advancedMaxVolumeValue.textContent = advancedMaxVolumeRange.value;
   });
-  document.getElementById('sources-btn').addEventListener('click', openSourcesModal);
-  ZONES.forEach((z,i)=>setTimeout(()=>fetchZoneState(z),i*200));
-  setInterval(pollAmpState,POLL_AMP_MS);
-  setInterval(pollConfig,POLL_CFG_MS);
-  setInterval(()=>{
-    ZONES.forEach(z=>{
-      if(ampState[z] && ampState[z].automation && ampState[z].automation.enabled){
-        const chip=document.getElementById(`auto-chip-${z}`);
-        if(chip && ampState[z].automation.remainingMs!=null){
-          ampState[z].automation.remainingMs=Math.max(0,ampState[z].automation.remainingMs-1000);
-          chip.textContent=fmtRemaining(ampState[z].automation.remainingMs);
-        }
-      }
-    });
-  },1000);
-  checkHealth();
-}
 
-init();
+  advancedMaxVolumeRange.addEventListener('change', async () => {
+    if (!advancedZone || !cfg) return;
+    const mv = parseInt(advancedMaxVolumeRange.value, 10) || 0;
+    cfg.zones[advancedZone] = cfg.zones[advancedZone] || {};
+    cfg.zones[advancedZone].maxVolume = mv;
+    await patchConfig({ zones: { [advancedZone]: { maxVolume: mv } } });
+  });
+
+  advancedBassRange.addEventListener('input', () => {
+    advancedBassValue.textContent = advancedBassRange.value;
+  });
+
+  advancedBassRange.addEventListener('change', async () => {
+    if (!advancedZone) return;
+    const val = parseInt(advancedBassRange.value, 10) || 0;
+    zoneState[advancedZone] = zoneState[advancedZone] || {};
+    zoneState[advancedZone].bass = val;
+    await sendAdvanced(`/api/zone/${advancedZone}/bass`, { bass: val });
+  });
+
+  advancedBassCenter.addEventListener('click', async () => {
+    if (!advancedZone) return;
+    advancedBassRange.value = '0';
+    advancedBassValue.textContent = '0';
+    zoneState[advancedZone] = zoneState[advancedZone] || {};
+    zoneState[advancedZone].bass = 0;
+    await sendAdvanced(`/api/zone/${advancedZone}/bass`, { bass: 0 });
+  });
+
+  advancedTrebleRange.addEventListener('input', () => {
+    advancedTrebleValue.textContent = advancedTrebleRange.value;
+  });
+
+  advancedTrebleRange.addEventListener('change', async () => {
+    if (!advancedZone) return;
+    const val = parseInt(advancedTrebleRange.value, 10) || 0;
+    zoneState[advancedZone] = zoneState[advancedZone] || {};
+    zoneState[advancedZone].treble = val;
+    await sendAdvanced(`/api/zone/${advancedZone}/treble`, { treble: val });
+  });
+
+  advancedTrebleCenter.addEventListener('click', async () => {
+    if (!advancedZone) return;
+    advancedTrebleRange.value = '0';
+    advancedTrebleValue.textContent = '0';
+    zoneState[advancedZone] = zoneState[advancedZone] || {};
+    zoneState[advancedZone].treble = 0;
+    await sendAdvanced(`/api/zone/${advancedZone}/treble`, { treble: 0 });
+  });
+
+  advancedBalanceRange.addEventListener('input', () => {
+    const val = parseInt(advancedBalanceRange.value, 10) || 10;
+    advancedBalanceValue.textContent = balanceLabel(val);
+  });
+
+  advancedBalanceRange.addEventListener('change', async () => {
+    if (!advancedZone) return;
+    const val = parseInt(advancedBalanceRange.value, 10) || 10;
+    zoneState[advancedZone] = zoneState[advancedZone] || {};
+    zoneState[advancedZone].balance = val;
+    await sendAdvanced(`/api/zone/${advancedZone}/balance`, { balance: val });
+  });
+
+  advancedBalanceCenter.addEventListener('click', async () => {
+    if (!advancedZone) return;
+    advancedBalanceRange.value = '10';
+    advancedBalanceValue.textContent = balanceLabel(10);
+    zoneState[advancedZone] = zoneState[advancedZone] || {};
+    zoneState[advancedZone].balance = 10;
+    await sendAdvanced(`/api/zone/${advancedZone}/balance`, { balance: 10 });
+  });
+
+  function balanceLabel(val) {
+    if (val < 8) return 'Left';
+    if (val > 12) return 'Right';
+    return 'Center';
+  }
+
+  async function sendAdvanced(url, body) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        console.error('Advanced change failed', await res.text());
+      }
+
+      await refreshSerialStatus();
+    } catch (err) {
+      console.error('Advanced change error', err);
+      await refreshSerialStatus();
+    }
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  document.addEventListener('DOMContentLoaded', bootstrap);
 </script>
 </body>
 </html>
