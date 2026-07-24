@@ -5,16 +5,15 @@ const express = require('express');
 const { SerialPort } = require('serialport');
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
-const SERIAL_PATH = process.env.SERIAL_PATH || process.env.SERIALPATH || '/dev/ttyUSB0';
-const CONFIG_PATH = process.env.CONFIG_PATH || process.env.CONFIGPATH || path.resolve('./config.json');
-const TERMINATOR = Buffer.from([0x0d, 0x0a]);
+const SERIAL_PATH = process.env.SERIAL_PATH || '/dev/ttyUSB0';
+const CONFIG_PATH = process.env.CONFIG_PATH || path.resolve('./config.json');
+const TERMINATOR = Buffer.from([0x0D, 0x0A]);
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const DEFAULT_CONFIG = {
-  title: 'Whole-Home Audio',
   theme: 'dark',
   sourceNames: {
     '1': 'Source 1',
@@ -25,7 +24,7 @@ const DEFAULT_CONFIG = {
     '6': 'Source 6'
   },
   zones: {
-    '1': { name: 'Kitchen', icon: '🍽️', maxVolume: 38 },
+    '1': { name: 'Kitchen', icon: '🍳', maxVolume: 38 },
     '2': { name: 'Laundry', icon: '🧺', maxVolume: 38 },
     '3': { name: 'Garage', icon: '🚗', maxVolume: 30 },
     '4': { name: 'Master Bedroom', icon: '🛏️', maxVolume: 38 },
@@ -46,6 +45,8 @@ const DEFAULT_CONFIG = {
   }
 };
 
+let config = loadConfig();
+
 function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
@@ -57,9 +58,7 @@ function deepMerge(target, src) {
     if (Array.isArray(val)) {
       target[key] = val.slice();
     } else if (typeof val === 'object' && val !== null) {
-      if (typeof target[key] !== 'object' || target[key] === null || Array.isArray(target[key])) {
-        target[key] = {};
-      }
+      if (typeof target[key] !== 'object' || target[key] === null) target[key] = {};
       deepMerge(target[key], val);
     } else {
       target[key] = val;
@@ -69,7 +68,7 @@ function deepMerge(target, src) {
 }
 
 function writeConfig(cfg) {
-  const tmpPath = `${CONFIG_PATH}.tmp`;
+  const tmpPath = CONFIG_PATH + '.tmp';
   fs.writeFileSync(tmpPath, JSON.stringify(cfg, null, 2), 'utf8');
   fs.renameSync(tmpPath, CONFIG_PATH);
 }
@@ -81,17 +80,15 @@ function loadConfig() {
       return deepMerge(deepClone(DEFAULT_CONFIG), parsed);
     }
   } catch (err) {
-    console.error('Failed to read config, using defaults:', err.message);
+    console.error('Failed to read config, using defaults:', err);
   }
   try {
     writeConfig(DEFAULT_CONFIG);
   } catch (err) {
-    console.error('Failed to seed config:', err.message);
+    console.error('Failed to seed config:', err);
   }
   return deepClone(DEFAULT_CONFIG);
 }
-
-let config = loadConfig();
 
 const serialStatus = {
   online: false,
@@ -115,19 +112,17 @@ serial.on('open', () => {
   serialStatus.online = true;
   serialStatus.lastError = null;
   serialStatus.openedAt = new Date().toISOString();
-  console.log('[serial] open', SERIAL_PATH);
 });
 
 serial.on('close', () => {
   serialStatus.online = false;
   serialStatus.lastClosedAt = new Date().toISOString();
-  console.log('[serial] closed');
 });
 
 serial.on('error', (err) => {
   serialStatus.online = false;
   serialStatus.lastError = err && err.message ? err.message : String(err);
-  console.error('[serial] error', serialStatus.lastError);
+  console.error('Serial error:', err);
 });
 
 serial.on('data', () => {
@@ -138,14 +133,14 @@ let serialQueue = Promise.resolve();
 const autoOffTimers = {};
 
 function enqueueSerial(fn) {
-  serialQueue = serialQueue.then(fn, fn);
+  serialQueue = serialQueue.then(() => fn());
   return serialQueue;
 }
 
 function ensureSerialOnline() {
   if (!serial.isOpen) {
     serialStatus.online = false;
-    const err = new Error(`serial port offline (${SERIAL_PATH})`);
+    const err = new Error(`serial port offline: ${SERIAL_PATH}`);
     err.statusCode = 503;
     throw err;
   }
@@ -194,17 +189,17 @@ function queryCommand(cmd) {
     function onData(chunk) {
       buffer += chunk.toString('ascii');
       serialStatus.lastActivityAt = new Date().toISOString();
-      const idx = buffer.indexOf('#');
+      const idx = buffer.indexOf('>');
       if (idx !== -1) {
         if (settleTimer) clearTimeout(settleTimer);
-        settleTimer = setTimeout(() => finish(null, buffer.slice(0, idx)), 200);
+        settleTimer = setTimeout(() => finish(null, buffer.slice(idx)), 200);
       }
     }
 
     try {
       ensureSerialOnline();
       timeoutTimer = setTimeout(() => {
-        const err = new Error(`query timeout waiting for amp response to ${cmd}`);
+        const err = new Error(`query timeout waiting for amp response to "${cmd}"`);
         err.statusCode = 504;
         finish(err);
       }, 2000);
@@ -227,11 +222,11 @@ function zonePrefix(zone) {
 }
 
 function parseZoneStatus(raw, zone) {
-  if (!raw || raw[0] !== '>') throw new Error(`invalid status line: ${raw}`);
-  const digits = raw.slice(1).replace(/[^0-9]/g, '');
-  if (digits.length < 22) throw new Error(`status line too short: ${digits}`);
+  if (!raw || raw[0] !== '>') throw new Error('Invalid status line: ' + raw);
+  const digits = raw.slice(1).replace(/[^\d]/g, '');
+  if (digits.length < 22) throw new Error('Status line too short: ' + digits);
   const fields = [];
-  for (let i = 0; i < 11; i += 1) fields.push(digits.slice(i * 2, i * 2 + 2));
+  for (let i = 0; i < 11; i++) fields.push(digits.slice(i * 2, i * 2 + 2));
   return {
     zone,
     zoneEcho: parseInt(fields[0], 10),
@@ -272,7 +267,7 @@ function clampVolume(zone, vol) {
   if (v > 38) v = 38;
   const zoneCfg = config.zones[String(zone)];
   if (zoneCfg && typeof zoneCfg.maxVolume === 'number' && v > zoneCfg.maxVolume) v = zoneCfg.maxVolume;
-  return Math.round(v);
+  return v;
 }
 
 function clampTone(value) {
@@ -280,7 +275,7 @@ function clampTone(value) {
   if (!Number.isFinite(v)) v = 0;
   if (v < 0) v = 0;
   if (v > 14) v = 14;
-  return Math.round(v);
+  return v;
 }
 
 function clampBalance(value) {
@@ -288,7 +283,7 @@ function clampBalance(value) {
   if (!Number.isFinite(v)) v = 10;
   if (v < 0) v = 0;
   if (v > 20) v = 20;
-  return Math.round(v);
+  return v;
 }
 
 function getAutomationZone(zone) {
@@ -301,10 +296,10 @@ function getAutomationZone(zone) {
 }
 
 function getAutoOffSettings(zone) {
-  const globalAutomation = config.automation || DEFAULT_CONFIG.automation;
+  const globalAutomation = config.automation || {};
   const zoneAutomation = getAutomationZone(zone);
   const enabled = Boolean(globalAutomation.enabled && zoneAutomation.enabled);
-  const minutes = Number(zoneAutomation.minutes ?? globalAutomation.defaultMinutes ?? 120);
+  const minutes = Number(zoneAutomation.minutes || globalAutomation.defaultMinutes || 120);
   return { enabled, minutes: Number.isFinite(minutes) && minutes > 0 ? minutes : 120 };
 }
 
@@ -324,11 +319,9 @@ function scheduleAutoOff(zone) {
   autoOffTimers[key] = setTimeout(async () => {
     try {
       const state = await getZoneState(zone);
-      if (state.power) {
-        await setZonePower(zone, false);
-      }
+      if (state.power) await setZonePower(zone, false);
     } catch (err) {
-      console.error(`[autooff] zone ${zone} failed:`, err.message);
+      console.error('Auto-off failed for zone', zone, err);
     } finally {
       autoOffTimers[key] = null;
     }
@@ -343,7 +336,7 @@ async function getZoneState(zone) {
 
 async function setZonePower(zone, on) {
   const z = validateZone(zone);
-  await writeCommand(`${zonePrefix(z)}PR${on ? '01' : '00'}`);
+  await writeCommand(`<${zonePrefix(z)}PR${on ? '01' : '00'}`);
   if (on) scheduleAutoOff(z);
   else cancelAutoOff(z);
   return { zone: z, power: !!on };
@@ -352,7 +345,7 @@ async function setZonePower(zone, on) {
 async function setZoneSource(zone, src) {
   const z = validateZone(zone);
   const s = validateSource(src);
-  await writeCommand(`${zonePrefix(z)}CH${String(s).padStart(2, '0')}`);
+  await writeCommand(`<${zonePrefix(z)}CH${String(s).padStart(2, '0')}`);
   scheduleAutoOff(z);
   return { zone: z, source: s };
 }
@@ -360,14 +353,14 @@ async function setZoneSource(zone, src) {
 async function setZoneVolume(zone, vol) {
   const z = validateZone(zone);
   const v = clampVolume(z, vol);
-  await writeCommand(`${zonePrefix(z)}VO${String(v).padStart(2, '0')}`);
+  await writeCommand(`<${zonePrefix(z)}VO${String(v).padStart(2, '0')}`);
   scheduleAutoOff(z);
   return { zone: z, volume: v };
 }
 
 async function setZoneMute(zone, mute) {
   const z = validateZone(zone);
-  await writeCommand(`${zonePrefix(z)}MU${mute ? '01' : '00'}`);
+  await writeCommand(`<${zonePrefix(z)}MU${mute ? '01' : '00'}`);
   scheduleAutoOff(z);
   return { zone: z, mute: !!mute };
 }
@@ -375,7 +368,7 @@ async function setZoneMute(zone, mute) {
 async function setZoneTreble(zone, treble) {
   const z = validateZone(zone);
   const t = clampTone(treble);
-  await writeCommand(`${zonePrefix(z)}TR${String(t).padStart(2, '0')}`);
+  await writeCommand(`<${zonePrefix(z)}TR${String(t).padStart(2, '0')}`);
   scheduleAutoOff(z);
   return { zone: z, treble: t };
 }
@@ -383,7 +376,7 @@ async function setZoneTreble(zone, treble) {
 async function setZoneBass(zone, bass) {
   const z = validateZone(zone);
   const b = clampTone(bass);
-  await writeCommand(`${zonePrefix(z)}BS${String(b).padStart(2, '0')}`);
+  await writeCommand(`<${zonePrefix(z)}BS${String(b).padStart(2, '0')}`);
   scheduleAutoOff(z);
   return { zone: z, bass: b };
 }
@@ -391,16 +384,14 @@ async function setZoneBass(zone, bass) {
 async function setZoneBalance(zone, balance) {
   const z = validateZone(zone);
   const b = clampBalance(balance);
-  await writeCommand(`${zonePrefix(z)}BL${String(b).padStart(2, '0')}`);
+  await writeCommand(`<${zonePrefix(z)}BL${String(b).padStart(2, '0')}`);
   scheduleAutoOff(z);
   return { zone: z, balance: b };
 }
 
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true });
-});
+app.get('/api/health', (req, res) => res.json({ ok: true }));
 
-app.get('/api/serial-status', (_req, res) => {
+app.get('/api/serial-status', (req, res) => {
   res.json({
     online: serial.isOpen,
     path: serialStatus.path,
@@ -413,7 +404,7 @@ app.get('/api/serial-status', (_req, res) => {
 
 app.get('/api/state', async (req, res) => {
   try {
-    const { zone } = req.query;
+    const zone = req.query.zone;
     if (zone === undefined) return res.status(400).json({ error: 'zone must be 1-6' });
     const state = await getZoneState(zone);
     res.json(state);
@@ -487,9 +478,7 @@ app.post('/api/zone/:zone/balance', async (req, res) => {
   }
 });
 
-app.get('/api/config', (_req, res) => {
-  res.json(config);
-});
+app.get('/api/config', (req, res) => res.json(config));
 
 app.patch('/api/config', (req, res) => {
   try {
@@ -497,41 +486,32 @@ app.patch('/api/config', (req, res) => {
     if (typeof body !== 'object' || body === null || Array.isArray(body)) {
       return res.status(400).json({ error: 'body must be an object' });
     }
-
-    const allowedTop = new Set(['title', 'theme', 'sourceNames', 'zones', 'automation']);
+    const allowedTop = new Set(['theme', 'sourceNames', 'zones', 'automation']);
     for (const key of Object.keys(body)) {
       if (!allowedTop.has(key)) return res.status(400).json({ error: `unknown top-level key: ${key}` });
     }
-
-    if (body.title !== undefined && typeof body.title !== 'string') {
-      return res.status(400).json({ error: 'title must be a string' });
-    }
-
     if (body.theme !== undefined && body.theme !== 'light' && body.theme !== 'dark') {
-      return res.status(400).json({ error: 'theme must be light or dark' });
+      return res.status(400).json({ error: 'theme must be "light" or "dark"' });
     }
-
     if (body.zones) {
       for (const [zoneKey, zoneVal] of Object.entries(body.zones)) {
-        if (!['1', '2', '3', '4', '5', '6'].includes(zoneKey)) return res.status(400).json({ error: `zone must be 1-6, got ${zoneKey}` });
-        if (typeof zoneVal !== 'object' || zoneVal === null || Array.isArray(zoneVal)) return res.status(400).json({ error: `zones.${zoneKey} must be an object` });
-        if (zoneVal.name !== undefined && typeof zoneVal.name !== 'string') return res.status(400).json({ error: `zones.${zoneKey}.name must be a string` });
-        if (zoneVal.icon !== undefined && typeof zoneVal.icon !== 'string') return res.status(400).json({ error: `zones.${zoneKey}.icon must be a string` });
+        if (!['1','2','3','4','5','6'].includes(zoneKey)) return res.status(400).json({ error: `zone must be 1-6 (got ${zoneKey})` });
+        if (typeof zoneVal !== 'object' || zoneVal === null || Array.isArray(zoneVal)) return res.status(400).json({ error: `zones["${zoneKey}"] must be an object` });
+        if (zoneVal.name !== undefined && typeof zoneVal.name !== 'string') return res.status(400).json({ error: `zones["${zoneKey}"].name must be a string` });
+        if (zoneVal.icon !== undefined && typeof zoneVal.icon !== 'string') return res.status(400).json({ error: `zones["${zoneKey}"].icon must be a string` });
         if (zoneVal.maxVolume !== undefined) {
           const mv = Number(zoneVal.maxVolume);
-          if (!Number.isFinite(mv) || mv < 0 || mv > 38) return res.status(400).json({ error: `zones.${zoneKey}.maxVolume must be 0-38` });
-          zoneVal.maxVolume = Math.round(mv);
+          if (!Number.isFinite(mv) || mv < 0 || mv > 38) return res.status(400).json({ error: `zones["${zoneKey}"].maxVolume must be 0-38` });
+          zoneVal.maxVolume = mv;
         }
       }
     }
-
     if (body.sourceNames) {
       for (const [sourceKey, value] of Object.entries(body.sourceNames)) {
-        if (!['1', '2', '3', '4', '5', '6'].includes(sourceKey)) return res.status(400).json({ error: `invalid source key ${sourceKey}` });
-        if (typeof value !== 'string') return res.status(400).json({ error: `sourceNames.${sourceKey} must be a string` });
+        if (!['1','2','3','4','5','6'].includes(sourceKey)) return res.status(400).json({ error: `invalid source key: ${sourceKey}` });
+        if (typeof value !== 'string') return res.status(400).json({ error: `sourceNames["${sourceKey}"] must be a string` });
       }
     }
-
     if (body.automation !== undefined) {
       const a = body.automation;
       if (typeof a !== 'object' || a === null || Array.isArray(a)) return res.status(400).json({ error: 'automation must be an object' });
@@ -539,22 +519,21 @@ app.patch('/api/config', (req, res) => {
       if (a.defaultMinutes !== undefined) {
         const minutes = Number(a.defaultMinutes);
         if (!Number.isFinite(minutes) || minutes < 1) return res.status(400).json({ error: 'automation.defaultMinutes must be >= 1' });
-        a.defaultMinutes = Math.round(minutes);
+        a.defaultMinutes = minutes;
       }
       if (a.zones !== undefined) {
         for (const [zoneKey, zoneVal] of Object.entries(a.zones)) {
-          if (!['1', '2', '3', '4', '5', '6'].includes(zoneKey)) return res.status(400).json({ error: `automation zone must be 1-6, got ${zoneKey}` });
-          if (typeof zoneVal !== 'object' || zoneVal === null || Array.isArray(zoneVal)) return res.status(400).json({ error: `automation.zones.${zoneKey} must be an object` });
-          if (zoneVal.enabled !== undefined && typeof zoneVal.enabled !== 'boolean') return res.status(400).json({ error: `automation.zones.${zoneKey}.enabled must be true or false` });
+          if (!['1','2','3','4','5','6'].includes(zoneKey)) return res.status(400).json({ error: `automation zone must be 1-6 (got ${zoneKey})` });
+          if (typeof zoneVal !== 'object' || zoneVal === null || Array.isArray(zoneVal)) return res.status(400).json({ error: `automation.zones["${zoneKey}"] must be an object` });
+          if (zoneVal.enabled !== undefined && typeof zoneVal.enabled !== 'boolean') return res.status(400).json({ error: `automation.zones["${zoneKey}"].enabled must be true or false` });
           if (zoneVal.minutes !== undefined) {
             const minutes = Number(zoneVal.minutes);
-            if (!Number.isFinite(minutes) || minutes < 1) return res.status(400).json({ error: `automation.zones.${zoneKey}.minutes must be >= 1` });
-            zoneVal.minutes = Math.round(minutes);
+            if (!Number.isFinite(minutes) || minutes < 1) return res.status(400).json({ error: `automation.zones["${zoneKey}"].minutes must be >= 1` });
+            zoneVal.minutes = minutes;
           }
         }
       }
     }
-
     config = deepMerge(config, body);
     writeConfig(config);
     res.json(config);
