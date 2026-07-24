@@ -1,17 +1,5 @@
 "use strict";
 
-/**
- * Monoprice 10761 Web Controller
- *
- * Production notes:
- * - RS-232 framing: 9600 8-N-1
- * - Every command MUST end with CR+LF (0x0D 0x0A)
- * - Zone prefix is controller-id 1 + single-digit zone 1..6 → 11..16
- * - Query commands return echoed bytes + '#' + '>' + 22 ASCII digits
- * - Set commands (power/source/volume) return NO response; drain only
- * - All serial transactions are serialized through a Promise queue
- */
-
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -23,7 +11,9 @@ const CONFIG_PATH = process.env.CONFIG_PATH || path.join(__dirname, "config.json
 const DEBUG_SERIAL = process.env.DEBUG_SERIAL === "1";
 
 let serialReadyResolve;
-const serialReady = new Promise(resolve => { serialReadyResolve = resolve; });
+const serialReady = new Promise(resolve => {
+  serialReadyResolve = resolve;
+});
 
 const CONFIG_DEFAULTS = {
   theme: "dark",
@@ -48,7 +38,7 @@ const CONFIG_DEFAULTS = {
       "3": { enabled: false, idleMinutes: 120 },
       "4": { enabled: false, idleMinutes: 120 },
       "5": { enabled: false, idleMinutes: 120 },
-      "6": { enabled: true,  idleMinutes: 120 }
+      "6": { enabled: true, idleMinutes: 120 }
     }
   }
 };
@@ -73,53 +63,6 @@ function deepMerge(dst, src) {
   return dst;
 }
 
-function ensureAutomationDefaults(config) {
-  if (!config.automation || typeof config.automation !== "object") {
-    config.automation = deepClone(CONFIG_DEFAULTS.automation);
-    return config;
-  }
-  if (typeof config.automation.enabled !== "boolean") {
-    config.automation.enabled = true;
-  }
-  const def = parseInt(config.automation.defaultIdleMinutes, 10);
-  config.automation.defaultIdleMinutes = Number.isFinite(def) ? clampIdleMinutes(def) : 120;
-  if (!config.automation.zones || typeof config.automation.zones !== "object") {
-    config.automation.zones = {};
-  }
-  for (let z = 1; z <= 6; z++) {
-    const key = String(z);
-    const existing = config.automation.zones[key] || {};
-    const fallback = CONFIG_DEFAULTS.automation.zones[key];
-    config.automation.zones[key] = {
-      enabled: typeof existing.enabled === "boolean" ? existing.enabled : fallback.enabled,
-      idleMinutes: clampIdleMinutes(parseInt(existing.idleMinutes, 10) || fallback.idleMinutes)
-    };
-  }
-  return config;
-}
-
-function loadConfig() {
-  if (!fs.existsSync(CONFIG_PATH)) {
-    cfg = deepClone(CONFIG_DEFAULTS);
-    writeConfig();
-    return;
-  }
-  try {
-    const raw = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
-    cfg = deepMerge(deepClone(CONFIG_DEFAULTS), raw);
-    ensureAutomationDefaults(cfg);
-  } catch (err) {
-    console.error("[config] Failed to read config, using defaults:", err.message);
-    cfg = deepClone(CONFIG_DEFAULTS);
-  }
-}
-
-function writeConfig() {
-  const tmp = CONFIG_PATH + ".tmp";
-  fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), "utf8");
-  fs.renameSync(tmp, CONFIG_PATH);
-}
-
 function clampVolume(v) {
   return Math.max(0, Math.min(38, parseInt(v, 10) || 0));
 }
@@ -134,6 +77,59 @@ function validZone(zone) {
 
 function validSource(source) {
   return Number.isInteger(source) && source >= 1 && source <= 6;
+}
+
+function ensureAutomationDefaults(config) {
+  if (!config.automation || typeof config.automation !== "object") {
+    config.automation = deepClone(CONFIG_DEFAULTS.automation);
+    return config;
+  }
+
+  if (typeof config.automation.enabled !== "boolean") {
+    config.automation.enabled = true;
+  }
+
+  const d = parseInt(config.automation.defaultIdleMinutes, 10);
+  config.automation.defaultIdleMinutes = Number.isFinite(d) ? clampIdleMinutes(d) : 120;
+
+  if (!config.automation.zones || typeof config.automation.zones !== "object") {
+    config.automation.zones = {};
+  }
+
+  for (let z = 1; z <= 6; z++) {
+    const key = String(z);
+    const existing = config.automation.zones[key] || {};
+    const fallback = CONFIG_DEFAULTS.automation.zones[key];
+    config.automation.zones[key] = {
+      enabled: typeof existing.enabled === "boolean" ? existing.enabled : fallback.enabled,
+      idleMinutes: clampIdleMinutes(parseInt(existing.idleMinutes, 10) || fallback.idleMinutes)
+    };
+  }
+
+  return config;
+}
+
+function loadConfig() {
+  if (!fs.existsSync(CONFIG_PATH)) {
+    cfg = deepClone(CONFIG_DEFAULTS);
+    writeConfig();
+    return;
+  }
+
+  try {
+    const raw = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+    cfg = deepMerge(deepClone(CONFIG_DEFAULTS), raw);
+    ensureAutomationDefaults(cfg);
+  } catch (err) {
+    console.error("[config] Failed to read config, using defaults:", err.message);
+    cfg = deepClone(CONFIG_DEFAULTS);
+  }
+}
+
+function writeConfig() {
+  const tmp = CONFIG_PATH + ".tmp";
+  fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), "utf8");
+  fs.renameSync(tmp, CONFIG_PATH);
 }
 
 const serial = new SerialPort({
@@ -173,16 +169,17 @@ function writeCommand(cmd) {
   return enqueue(async () => {
     await serialReady;
     return new Promise((resolve, reject) => {
-    if (!serial.isOpen) return reject(new Error("Serial port not open"));
-    const buf = Buffer.concat([Buffer.from(cmd, "ascii"), TERMINATOR]);
-    if (DEBUG_SERIAL) console.log(`[serial] TX ${JSON.stringify(cmd)} [${hexDump(buf)}]`);
-    serial.write(buf, err => {
-      if (err) return reject(err);
-      serial.drain(drainErr => {
-        if (drainErr) return reject(drainErr);
-        serial.flush(flushErr => {
-          if (flushErr) console.warn("[serial] post-write flush warning:", flushErr.message);
-          resolve();
+      if (!serial.isOpen) return reject(new Error("Serial port not open"));
+      const buf = Buffer.concat([Buffer.from(cmd, "ascii"), TERMINATOR]);
+      if (DEBUG_SERIAL) console.log(`[serial] TX ${JSON.stringify(cmd)} [${hexDump(buf)}]`);
+      serial.write(buf, err => {
+        if (err) return reject(err);
+        serial.drain(drainErr => {
+          if (drainErr) return reject(drainErr);
+          serial.flush(flushErr => {
+            if (flushErr) console.warn("[serial] post-write flush warning:", flushErr.message);
+            resolve();
+          });
         });
       });
     });
@@ -193,51 +190,52 @@ function queryCommand(cmd) {
   return enqueue(async () => {
     await serialReady;
     return new Promise((resolve, reject) => {
-    if (!serial.isOpen) return reject(new Error("Serial port not open"));
-    const SETTLE_MS = 200;
-    const TIMEOUT_MS = 3000;
-    let rxBuf = "";
-    let settleTimer = null;
+      if (!serial.isOpen) return reject(new Error("Serial port not open"));
+      const SETTLE_MS = 200;
+      const TIMEOUT_MS = 3000;
+      let rxBuf = "";
+      let settleTimer = null;
 
-    function cleanup() {
-      clearTimeout(timeout);
-      if (settleTimer) clearTimeout(settleTimer);
-      serial.removeAllListeners("data");
-    }
-
-    const onData = chunk => {
-      rxBuf += chunk.toString("ascii");
-      if (DEBUG_SERIAL) {
-        console.log(`[serial] RX hex ${hexDump(chunk)}`);
-        console.log(`[serial] RX buf ${JSON.stringify(rxBuf)}`);
-      }
-      const idx = rxBuf.indexOf(">");
-      if (idx !== -1) {
+      function cleanup() {
+        clearTimeout(timeout);
         if (settleTimer) clearTimeout(settleTimer);
-        settleTimer = setTimeout(() => {
-          const response = rxBuf.substring(idx);
-          cleanup();
-          resolve(response);
-        }, SETTLE_MS);
+        serial.removeAllListeners("data");
       }
-    };
 
-    const timeout = setTimeout(() => {
-      console.error(`[serial] TIMEOUT cmd=${JSON.stringify(cmd)} rxBuf=${JSON.stringify(rxBuf)}`);
-      cleanup();
-      reject(new Error(`Query ${JSON.stringify(cmd)} timed out after ${TIMEOUT_MS} ms`));
-    }, TIMEOUT_MS);
-
-    serial.flush(flushErr => {
-      if (flushErr) console.warn("[serial] pre-query flush warning:", flushErr.message);
-      serial.on("data", onData);
-      const txBuf = Buffer.concat([Buffer.from(cmd, "ascii"), TERMINATOR]);
-      if (DEBUG_SERIAL) console.log(`[serial] TX ${JSON.stringify(cmd)} [${hexDump(txBuf)}]`);
-      serial.write(txBuf, writeErr => {
-        if (writeErr) {
-          cleanup();
-          reject(writeErr);
+      const onData = chunk => {
+        rxBuf += chunk.toString("ascii");
+        if (DEBUG_SERIAL) {
+          console.log(`[serial] RX hex ${hexDump(chunk)}`);
+          console.log(`[serial] RX buf ${JSON.stringify(rxBuf)}`);
         }
+        const idx = rxBuf.indexOf(">");
+        if (idx !== -1) {
+          if (settleTimer) clearTimeout(settleTimer);
+          settleTimer = setTimeout(() => {
+            const response = rxBuf.substring(idx);
+            cleanup();
+            resolve(response);
+          }, SETTLE_MS);
+        }
+      };
+
+      const timeout = setTimeout(() => {
+        console.error(`[serial] TIMEOUT cmd=${JSON.stringify(cmd)} rxBuf=${JSON.stringify(rxBuf)}`);
+        cleanup();
+        reject(new Error(`Query ${JSON.stringify(cmd)} timed out after ${TIMEOUT_MS} ms`));
+      }, TIMEOUT_MS);
+
+      serial.flush(flushErr => {
+        if (flushErr) console.warn("[serial] pre-query flush warning:", flushErr.message);
+        serial.on("data", onData);
+        const txBuf = Buffer.concat([Buffer.from(cmd, "ascii"), TERMINATOR]);
+        if (DEBUG_SERIAL) console.log(`[serial] TX ${JSON.stringify(cmd)} [${hexDump(txBuf)}]`);
+        serial.write(txBuf, writeErr => {
+          if (writeErr) {
+            cleanup();
+            reject(writeErr);
+          }
+        });
       });
     });
   });
@@ -303,6 +301,14 @@ function clearAutoOff(zone) {
   }
 }
 
+function cancelZoneAutomation(zone, reason) {
+  clearAutoOff(zone);
+  delete autoOffState.lastActivity[zone];
+  if (reason !== "startup-off") {
+    console.log(`[autooff] zone ${zone} timer cleared: ${reason}`);
+  }
+}
+
 function getAutoOffRemainingMs(zone) {
   const rule = getZoneAutomation(zone);
   const last = autoOffState.lastActivity[zone];
@@ -319,24 +325,11 @@ function getAutomationStatus(zone) {
   };
 }
 
-function markZoneActivity(zone, reason) {
-  autoOffState.lastActivity[zone] = Date.now();
-  console.log(`[autooff] zone ${zone} activity: ${reason}`);
-  scheduleAutoOff(zone, reason);
-}
-
-function cancelZoneAutomation(zone, reason) {
-  clearAutoOff(zone);
-  delete autoOffState.lastActivity[zone];
-  if (reason !== 'startup-off') {
-    console.log(`[autooff] zone ${zone} timer cleared: ${reason}`);
-  }
-}
-
 function scheduleAutoOff(zone, reason) {
   clearAutoOff(zone);
   const rule = getZoneAutomation(zone);
   if (!rule.enabled) return;
+
   autoOffState.timers[zone] = setTimeout(async () => {
     try {
       const state = await getZoneState(zone);
@@ -350,7 +343,14 @@ function scheduleAutoOff(zone, reason) {
       scheduleAutoOff(zone, "retry-after-error");
     }
   }, rule.idleMinutes * 60 * 1000);
+
   console.log(`[autooff] zone ${zone} timer set for ${rule.idleMinutes} min (${reason})`);
+}
+
+function markZoneActivity(zone, reason) {
+  autoOffState.lastActivity[zone] = Date.now();
+  console.log(`[autooff] zone ${zone} activity: ${reason}`);
+  scheduleAutoOff(zone, reason);
 }
 
 async function bootstrapAutoOffFromAmp() {
@@ -450,19 +450,22 @@ app.patch("/api/config", (req, res) => {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     return res.status(400).json({ error: "Request body must be a JSON object" });
   }
+
   for (const key of Object.keys(body)) {
     if (!VALID_CONFIG_KEYS.has(key)) {
       return res.status(400).json({ error: `Unknown config key: ${JSON.stringify(key)}` });
     }
   }
+
   if (body.automation && typeof body.automation !== "object") {
     return res.status(400).json({ error: "automation must be an object" });
   }
+
   deepMerge(cfg, body);
   ensureAutomationDefaults(cfg);
   writeConfig();
-  for (let z = 1; z <= 6; z++) {
-    const zone = z;
+
+  for (let zone = 1; zone <= 6; zone++) {
     const rule = getZoneAutomation(zone);
     if (!rule.enabled) {
       clearAutoOff(zone);
@@ -470,6 +473,7 @@ app.patch("/api/config", (req, res) => {
       scheduleAutoOff(zone, "config-change");
     }
   }
+
   res.json(cfg);
 });
 
