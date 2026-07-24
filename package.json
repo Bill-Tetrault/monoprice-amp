@@ -1,17 +1,17 @@
 {
-  "name": "monoprice-amp-controller",
-  "version": "1.1.0",
-  "description": "Web controller for Monoprice 10761 6-zone whole-home audio amplifier",
+  "name": "monoprice-10761-rs232-web-controller",
+  "version": "1.3.0",
+  "description": "Web controller for Monoprice 10761 6-zone amplifier over RS-232",
   "main": "server.js",
+  "type": "commonjs",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "express": "^4.19.2",
     "serialport": "^12.0.0"
   },
   "engines": {
-    "node": ">=20.0.0"
-  },
-  "license": "MIT"
+    "node": ">=20"
+  }
 }
