@@ -5,41 +5,27 @@
  * Backend: Node.js + Express
  * - Controls the Monoprice 10761 6-zone whole-home audio amplifier over RS-232.
  * - Exposes a REST API for zone power, source, volume, tone, balance, and mute.
- * - Maintains a server-side JSON config for UI theme, source names, and zone metadata.
+ * - Maintains a server-side JSON config for UI theme, source names, zone metadata,
+ *   and per-zone auto-off timers.
  *
- * IMPORTANT: RS-232 protocol details (validated against real hardware):
- * - 9600 baud, 8-N-1, straight-through DB9, CR+LF terminator.
- * - Zone prefix is "1<Z>" where 1 is controller ID and Z is single-digit zone (1–6).
- *   Example: Zone 1 prefix "11", Zone 6 prefix "16".
- * - Commands:
- *   Query:   ?1<Z>\r\n       (e.g. ?11\r\n)
- *   Power:   <1<Z>PR01\r\n   (on)  / <1<Z>PR00\r\n (off)
- *   Source:  <1<Z>CH0N\r\n   (01–06)
- *   Volume:  <1<Z>VO##\r\n   (00–38)
- *   Treble:  <1<Z>TR##\r\n   (tone control)
- *   Bass:    <1<Z>BS##\r\n   (tone control)
- *   Balance: <1<Z>BL##\r\n   (left/right balance)
- *   Mute:    <1<Z>MU01\r\n   (mute on) / <1<Z>MU00\r\n (mute off)
+ * IMPORTANT RS-232 NOTES (validated):
+ * - 9600 baud, 8-N-1, straight-through DB9, CR+LF terminator (0x0D 0x0A).
+ * - Zone prefix = "1<Z>" where 1 is controller ID and Z is single-digit zone (1–6).
+ *   Example: zone 1 -> "11", zone 6 -> "16".
+ * - Query:   ?1<Z>\r\n       e.g. "?11\r\n"
+ * - Power:   <1<Z>PR01\r\n   on / <1<Z>PR00\r\n off
+ * - Source:  <1<Z>CH0N\r\n   01–06
+ * - Volume:  <1<Z>VO##\r\n   00–38
+ * - Tone, balance, mute follow the same "<1<Z>XX##" pattern.
  *
- * Query responses:
- * - Amp echoes sent bytes, then sends '#' and a line beginning with '>'.
- * - Response: ">" + 22 ASCII digits (11 × 2-digit fields).
- *   Fields (2 chars each after '>'):
- *     0: ZZ zone echo
- *     1: PA public address (not used here)
- *     2: PR power (0/1)
- *     3: MU mute (0/1)
- *     4: DT do not disturb
- *     5: VO volume (00–38)
- *     6: TR treble
- *     7: BS bass
- *     8: BL balance
- *     9: CH source (01–06)
- *    10: LS keypad flag
+ * Query commands:
+ * - Amp echoes sent bytes, then '#', then a line that starts with '>' and
+ *   contains 22 ASCII digits (11 × 2-digit fields).
  *
  * Set commands:
- * - Do NOT produce a status response; they just echo bytes.
- * - We only wait for the serial port to drain, then resolve.
+ * - Amp does NOT send a '>' status line; it just echoes bytes.
+ *   We therefore only wait for serial.drain() and do not attempt to parse a
+ *   response for set commands.
  */
 
 const fs = require('fs');
@@ -50,12 +36,19 @@ const { SerialPort } = require('serialport');
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const SERIAL_PATH = process.env.SERIAL_PATH || '/dev/ttyUSB0';
 const CONFIG_PATH = process.env.CONFIG_PATH || path.resolve('./config.json');
+
+// CR+LF terminator required by the amp.
 const TERMINATOR = Buffer.from([0x0D, 0x0A]);
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+/**
+ * Default UI + automation config.
+ * This is used to seed config.json on first run and to fill in missing keys
+ * when loading an existing config file.
+ */
 const DEFAULT_CONFIG = {
   theme: 'dark',
   sourceNames: {
@@ -67,12 +60,12 @@ const DEFAULT_CONFIG = {
     '6': 'Source 6'
   },
   zones: {
-    '1': { name: 'Kitchen', icon: '🍳', maxVolume: 38 },
-    '2': { name: 'Laundry', icon: '🧺', maxVolume: 38 },
-    '3': { name: 'Garage', icon: '🚗', maxVolume: 30 },
+    '1': { name: 'Kitchen',        icon: '🍳', maxVolume: 38 },
+    '2': { name: 'Laundry',        icon: '🧺', maxVolume: 38 },
+    '3': { name: 'Garage',         icon: '🚗', maxVolume: 30 },
     '4': { name: 'Master Bedroom', icon: '🛏️', maxVolume: 38 },
-    '5': { name: 'Bathroom', icon: '🛁', maxVolume: 38 },
-    '6': { name: 'Patio', icon: '🌿', maxVolume: 30 }
+    '5': { name: 'Bathroom',       icon: '🛁', maxVolume: 38 },
+    '6': { name: 'Patio',          icon: '🌿', maxVolume: 30 }
   },
   automation: {
     enabled: true,
@@ -80,10 +73,10 @@ const DEFAULT_CONFIG = {
     zones: {
       '1': { enabled: false, minutes: 120 },
       '2': { enabled: false, minutes: 120 },
-      '3': { enabled: true, minutes: 120 },
+      '3': { enabled: true,  minutes: 120 },
       '4': { enabled: false, minutes: 120 },
       '5': { enabled: false, minutes: 120 },
-      '6': { enabled: true, minutes: 120 }
+      '6': { enabled: true,  minutes: 120 }
     }
   }
 };
@@ -95,7 +88,8 @@ function loadConfig() {
     if (fs.existsSync(CONFIG_PATH)) {
       const raw = fs.readFileSync(CONFIG_PATH, 'utf8');
       const parsed = JSON.parse(raw);
-      return deepMerge(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), parsed);
+      // Deep merge user config over defaults.
+      return deepMerge(structuredClone(DEFAULT_CONFIG), parsed);
     }
   } catch (err) {
     console.error('Failed to read config.json, using defaults:', err);
@@ -107,7 +101,7 @@ function loadConfig() {
     console.error('Failed to write default config.json:', err);
   }
 
-  return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  return structuredClone(DEFAULT_CONFIG);
 }
 
 function writeConfig(cfg) {
@@ -118,7 +112,6 @@ function writeConfig(cfg) {
 
 function deepMerge(target, src) {
   if (typeof src !== 'object' || src === null) return target;
-
   for (const key of Object.keys(src)) {
     const val = src[key];
     if (Array.isArray(val)) {
@@ -135,6 +128,9 @@ function deepMerge(target, src) {
   return target;
 }
 
+/**
+ * Serial connection status for the frontend banner.
+ */
 const serialStatus = {
   online: false,
   path: SERIAL_PATH,
@@ -144,6 +140,10 @@ const serialStatus = {
   lastActivityAt: null
 };
 
+/**
+ * Raw Buffer mode SerialPort.
+ * No parser pipes, we consume 'data' events directly.
+ */
 const serial = new SerialPort({
   path: SERIAL_PATH,
   baudRate: 9600,
@@ -176,8 +176,10 @@ serial.on('data', () => {
   serialStatus.lastActivityAt = new Date().toISOString();
 });
 
+/**
+ * Serial transaction queue – ensures RS-232 commands never overlap.
+ */
 let serialQueue = Promise.resolve();
-const autoOffTimers = {};
 
 function enqueueSerial(fn) {
   serialQueue = serialQueue.then(() => fn());
@@ -193,122 +195,132 @@ function ensureSerialOnline() {
   }
 }
 
+/**
+ * Write a set-command (power/source/volume/tone/balance/mute).
+ * Appends CR+LF, waits for drain, does not expect a '>' response.
+ */
 function writeCommand(cmd) {
-  return enqueueSerial(() => {
-    return new Promise((resolve, reject) => {
-      try {
-        ensureSerialOnline();
-        const buf = Buffer.from(cmd, 'ascii');
-        const payload = Buffer.concat([buf, TERMINATOR]);
+  return enqueueSerial(() => new Promise((resolve, reject) => {
+    try {
+      ensureSerialOnline();
+      const buf = Buffer.from(cmd, 'ascii');
+      const payload = Buffer.concat([buf, TERMINATOR]);
 
-        serial.write(payload, (writeErr) => {
-          if (writeErr) {
-            serialStatus.online = serial.isOpen;
-            serialStatus.lastError = writeErr.message || String(writeErr);
-            return reject(writeErr);
-          }
-
-          serial.drain((drainErr) => {
-            if (drainErr) {
-              serialStatus.online = serial.isOpen;
-              serialStatus.lastError = drainErr.message || String(drainErr);
-              return reject(drainErr);
-            }
-
-            serialStatus.lastActivityAt = new Date().toISOString();
-            resolve();
-          });
-        });
-      } catch (err) {
-        reject(err);
-      }
-    });
-  });
-}
-
-function queryCommand(cmd) {
-  return enqueueSerial(() => {
-    return new Promise((resolve, reject) => {
-      let buffer = '';
-      let settleTimer = null;
-      let timeoutTimer = null;
-      let finished = false;
-
-      function finish(err, value) {
-        if (finished) return;
-        finished = true;
-        cleanup();
-        if (err) reject(err);
-        else resolve(value);
-      }
-
-      function cleanup() {
-        serial.off('data', onData);
-        if (settleTimer) clearTimeout(settleTimer);
-        if (timeoutTimer) clearTimeout(timeoutTimer);
-      }
-
-      function onData(chunk) {
-        buffer += chunk.toString('ascii');
-        serialStatus.lastActivityAt = new Date().toISOString();
-
-        const idx = buffer.indexOf('>');
-        if (idx !== -1) {
-          if (settleTimer) clearTimeout(settleTimer);
-          settleTimer = setTimeout(() => {
-            const response = buffer.slice(idx);
-            finish(null, response);
-          }, 200);
+      serial.write(payload, (writeErr) => {
+        if (writeErr) {
+          serialStatus.online = serial.isOpen;
+          serialStatus.lastError = writeErr.message || String(writeErr);
+          return reject(writeErr);
         }
-      }
 
-      try {
-        ensureSerialOnline();
-
-        timeoutTimer = setTimeout(() => {
-          const err = new Error(`query timeout waiting for amp response to "${cmd}"`);
-          err.statusCode = 504;
-          finish(err);
-        }, 2000);
-
-        serial.on('data', onData);
-
-        const buf = Buffer.from(cmd, 'ascii');
-        const payload = Buffer.concat([buf, TERMINATOR]);
-
-        serial.write(payload, (writeErr) => {
-          if (writeErr) {
+        serial.drain((drainErr) => {
+          if (drainErr) {
             serialStatus.online = serial.isOpen;
-            serialStatus.lastError = writeErr.message || String(writeErr);
-            return finish(writeErr);
+            serialStatus.lastError = drainErr.message || String(drainErr);
+            return reject(drainErr);
           }
 
-          serial.drain((drainErr) => {
-            if (drainErr) {
-              serialStatus.online = serial.isOpen;
-              serialStatus.lastError = drainErr.message || String(drainErr);
-              return finish(drainErr);
-            }
-          });
+          serialStatus.lastActivityAt = new Date().toISOString();
+          resolve();
         });
-      } catch (err) {
-        finish(err);
-      }
-    });
-  });
+      });
+    } catch (err) {
+      reject(err);
+    }
+  }));
 }
 
+/**
+ * Send a query command (?1Z) and resolve with the full '>...' response line.
+ * Accumulates raw 'data' chunks, waits 200 ms after '>' appears to let the
+ * buffer settle, then slices from '>' onward.
+ */
+function queryCommand(cmd) {
+  return enqueueSerial(() => new Promise((resolve, reject) => {
+    let buffer = '';
+    let settleTimer = null;
+    let timeoutTimer = null;
+    let finished = false;
+
+    function finish(err, value) {
+      if (finished) return;
+      finished = true;
+      cleanup();
+      if (err) reject(err);
+      else resolve(value);
+    }
+
+    function cleanup() {
+      serial.off('data', onData);
+      if (settleTimer) clearTimeout(settleTimer);
+      if (timeoutTimer) clearTimeout(timeoutTimer);
+    }
+
+    function onData(chunk) {
+      buffer += chunk.toString('ascii');
+      serialStatus.lastActivityAt = new Date().toISOString();
+
+      const idx = buffer.indexOf('>');
+      if (idx !== -1) {
+        if (settleTimer) clearTimeout(settleTimer);
+        settleTimer = setTimeout(() => {
+          const response = buffer.slice(idx);
+          finish(null, response);
+        }, 200);
+      }
+    }
+
+    try {
+      ensureSerialOnline();
+
+      timeoutTimer = setTimeout(() => {
+        const err = new Error(`query timeout waiting for amp response to "${cmd}"`);
+        err.statusCode = 504;
+        finish(err);
+      }, 2000);
+
+      serial.on('data', onData);
+
+      const buf = Buffer.from(cmd, 'ascii');
+      const payload = Buffer.concat([buf, TERMINATOR]);
+
+      serial.write(payload, (writeErr) => {
+        if (writeErr) {
+          serialStatus.online = serial.isOpen;
+          serialStatus.lastError = writeErr.message || String(writeErr);
+          return finish(writeErr);
+        }
+
+        serial.drain((drainErr) => {
+          if (drainErr) {
+            serialStatus.online = serial.isOpen;
+            serialStatus.lastError = drainErr.message || String(drainErr);
+            return finish(drainErr);
+          }
+        });
+      });
+    } catch (err) {
+      finish(err);
+    }
+  }));
+}
+
+/**
+ * Build the "1Z" prefix (controller 1 + single-digit zone).
+ */
 function zonePrefix(zone) {
   return `1${zone}`;
 }
 
+/**
+ * Parse a raw ">1100000000111111100401" status line into fields.
+ */
 function parseZoneStatus(raw, zone) {
   if (!raw || raw[0] !== '>') {
     throw new Error('Invalid status line: ' + raw);
   }
 
   const digits = raw.slice(1).replace(/[^\d]/g, '');
-
   if (digits.length < 22) {
     throw new Error('Status line too short: ' + digits);
   }
@@ -340,6 +352,14 @@ function parseZoneStatus(raw, zone) {
   };
 }
 
+/**
+ * Auto-off timer map: { [zone]: timeoutId }
+ */
+const autoOffTimers = {};
+
+/**
+ * Helpers for validation and clamping.
+ */
 function validateZone(zone) {
   const z = Number(zone);
   if (!Number.isInteger(z) || z < 1 || z > 6) {
@@ -389,11 +409,15 @@ function clampBalance(value) {
   return v;
 }
 
+/**
+ * Automation helpers – read enable/minutes from config.automation.
+ */
 function getAutoOffSettings(zone) {
-  const globalAutomation = config.automation || {};
-  const zoneAutomation = globalAutomation.zones?.[String(zone)] || {};
-  const enabled = Boolean(globalAutomation.enabled && zoneAutomation.enabled);
-  const minutes = Number(zoneAutomation.minutes || globalAutomation.defaultMinutes || 120);
+  const global = config.automation || {};
+  const perZone = global.zones?.[String(zone)] || {};
+  const enabled = Boolean(global.enabled && perZone.enabled);
+  const minutesRaw = perZone.minutes ?? global.defaultMinutes ?? 120;
+  const minutes = Number(minutesRaw);
   return {
     enabled,
     minutes: Number.isFinite(minutes) && minutes > 0 ? minutes : 120
@@ -401,39 +425,49 @@ function getAutoOffSettings(zone) {
 }
 
 function cancelAutoOff(zone) {
-  const zKey = String(zone);
-  if (autoOffTimers[zKey]) {
-    clearTimeout(autoOffTimers[zKey]);
-    autoOffTimers[zKey] = null;
+  const key = String(zone);
+  if (autoOffTimers[key]) {
+    clearTimeout(autoOffTimers[key]);
+    autoOffTimers[key] = null;
   }
 }
 
+/**
+ * Schedule auto-off for a zone:
+ * - Clears any existing timer.
+ * - If automation disabled, does nothing.
+ * - Otherwise schedules a setTimeout that re-queries the zone and powers it
+ *   off if still on.
+ */
 function scheduleAutoOff(zone) {
-  const zKey = String(zone);
+  const key = String(zone);
   const settings = getAutoOffSettings(zone);
 
-  cancelAutoOff(zKey);
+  cancelAutoOff(zone);
 
-  if (!settings.enabled) {
-    return;
-  }
+  if (!settings.enabled) return;
 
   const ms = settings.minutes * 60 * 1000;
-  autoOffTimers[zKey] = setTimeout(async () => {
+  autoOffTimers[key] = setTimeout(async () => {
     try {
       const state = await getZoneState(zone);
       if (state.power) {
         await setZonePower(zone, false);
-        console.log(`Auto-off: zone ${zone} powered off after ${settings.minutes} minutes.`);
+        console.log(
+          `Auto-off: zone ${zone} powered off after ${settings.minutes} minutes.`
+        );
       }
     } catch (err) {
       console.error('Auto-off failed for zone', zone, err);
     } finally {
-      autoOffTimers[zKey] = null;
+      autoOffTimers[key] = null;
     }
   }, ms);
 }
 
+/**
+ * High-level helpers.
+ */
 async function getZoneState(zone) {
   const z = validateZone(zone);
   const prefix = zonePrefix(z);
@@ -518,6 +552,10 @@ async function setZoneBalance(zone, balance) {
   return { zone: z, balance: b };
 }
 
+/**
+ * API endpoints.
+ */
+
 app.get('/api/health', (req, res) => {
   res.json({ ok: true });
 });
@@ -551,8 +589,7 @@ app.get('/api/state', async (req, res) => {
       balance: state.balance
     });
   } catch (err) {
-    const status = err.statusCode || 500;
-    res.status(status).json({ error: err.message || 'internal error' });
+    res.status(err.statusCode || 500).json({ error: err.message || 'internal error' });
   }
 });
 
@@ -566,8 +603,7 @@ app.post('/api/zone/:zone/power', async (req, res) => {
     const result = await setZonePower(zone, on);
     res.json({ ok: true, zone: result.zone, power: result.power });
   } catch (err) {
-    const status = err.statusCode || 500;
-    res.status(status).json({ error: err.message || 'internal error' });
+    res.status(err.statusCode || 500).json({ error: err.message || 'internal error' });
   }
 });
 
@@ -578,8 +614,7 @@ app.post('/api/zone/:zone/source', async (req, res) => {
     const result = await setZoneSource(zone, source);
     res.json({ ok: true, zone: result.zone, source: result.source });
   } catch (err) {
-    const status = err.statusCode || 500;
-    res.status(status).json({ error: err.message || 'internal error' });
+    res.status(err.statusCode || 500).json({ error: err.message || 'internal error' });
   }
 });
 
@@ -590,8 +625,7 @@ app.post('/api/zone/:zone/volume', async (req, res) => {
     const result = await setZoneVolume(zone, volume);
     res.json({ ok: true, zone: result.zone, volume: result.volume });
   } catch (err) {
-    const status = err.statusCode || 500;
-    res.status(status).json({ error: err.message || 'internal error' });
+    res.status(err.statusCode || 500).json({ error: err.message || 'internal error' });
   }
 });
 
@@ -605,8 +639,7 @@ app.post('/api/zone/:zone/mute', async (req, res) => {
     const result = await setZoneMute(zone, mute);
     res.json({ ok: true, zone: result.zone, mute: result.mute });
   } catch (err) {
-    const status = err.statusCode || 500;
-    res.status(status).json({ error: err.message || 'internal error' });
+    res.status(err.statusCode || 500).json({ error: err.message || 'internal error' });
   }
 });
 
@@ -617,8 +650,7 @@ app.post('/api/zone/:zone/treble', async (req, res) => {
     const result = await setZoneTreble(zone, treble);
     res.json({ ok: true, zone: result.zone, treble: result.treble });
   } catch (err) {
-    const status = err.statusCode || 500;
-    res.status(status).json({ error: err.message || 'internal error' });
+    res.status(err.statusCode || 500).json({ error: err.message || 'internal error' });
   }
 });
 
@@ -629,8 +661,7 @@ app.post('/api/zone/:zone/bass', async (req, res) => {
     const result = await setZoneBass(zone, bass);
     res.json({ ok: true, zone: result.zone, bass: result.bass });
   } catch (err) {
-    const status = err.statusCode || 500;
-    res.status(status).json({ error: err.message || 'internal error' });
+    res.status(err.statusCode || 500).json({ error: err.message || 'internal error' });
   }
 });
 
@@ -641,8 +672,7 @@ app.post('/api/zone/:zone/balance', async (req, res) => {
     const result = await setZoneBalance(zone, balance);
     res.json({ ok: true, zone: result.zone, balance: result.balance });
   } catch (err) {
-    const status = err.statusCode || 500;
-    res.status(status).json({ error: err.message || 'internal error' });
+    res.status(err.statusCode || 500).json({ error: err.message || 'internal error' });
   }
 });
 
