@@ -1,17 +1,306 @@
-{
-  "name": "monoprice-10761-rs232-web-controller",
-  "version": "1.3.0",
-  "description": "Web controller for Monoprice 10761 6-zone amplifier over RS-232",
-  "main": "server.js",
-  "type": "commonjs",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.19.2",
-    "serialport": "^12.0.0"
-  },
-  "engines": {
-    "node": ">=20"
-  }
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Whole-Home Audio</title>
+<style>
+:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3250;--accent:#6c63ff;--accent-glow:#6c63ff44;--on-green:#22c55e;--on-glow:#22c55e33;--text:#e2e8f0;--text-muted:#94a3b8;--warning:#f59e0b;--radius:14px;--shadow:0 4px 24px rgba(0,0,0,.35);--transition:.2s ease}
+[data-theme="light"]{--bg:#f0f4f8;--surface:#fff;--surface2:#e8edf3;--border:#cbd5e1;--accent:#4f46e5;--accent-glow:#4f46e522;--text:#1e293b;--text-muted:#64748b;--shadow:0 4px 24px rgba(0,0,0,.12)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+button,input,select{font:inherit} button{cursor:pointer;border:none;background:none;color:inherit}
+header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;box-shadow:var(--shadow)}
+.header-title{font-size:1.2rem;font-weight:700;display:flex;gap:.5rem;align-items:center}
+.header-actions{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end}
+.btn-icon{padding:.5rem .75rem;border-radius:10px;background:var(--surface2);border:1px solid var(--border);min-height:44px}
+.grid{display:grid;grid-template-columns:1fr;gap:1rem;padding:1rem;max-width:1200px;margin:0 auto}
+@media(min-width:650px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:980px){.grid{grid-template-columns:repeat(3,1fr)}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;display:flex;flex-direction:column;gap:.8rem;box-shadow:var(--shadow)}
+.card.powered{border-color:var(--on-green);box-shadow:0 0 0 2px var(--on-glow),var(--shadow)}
+.card-header{display:flex;align-items:center;gap:.6rem}
+.zone-icon-btn,.power-btn{display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:var(--surface2);-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.zone-icon-btn{width:2.9rem;height:2.9rem;min-width:44px;min-height:44px;border-radius:12px;font-size:1.7rem;flex-shrink:0}
+.zone-name-input{flex:1;min-width:0;background:transparent;border:none;color:var(--text);font-size:1rem;font-weight:650;padding:.2rem 0;border-bottom:2px solid transparent;outline:none}
+.zone-name-input:focus{border-color:var(--accent)}
+.power-btn{width:2.7rem;height:2.7rem;min-width:44px;min-height:44px;border-radius:999px;flex-shrink:0;color:var(--text)}
+.power-btn svg{display:block;width:18px;height:18px;stroke:currentColor;pointer-events:none}
+.power-btn.on{background:var(--on-green);border-color:var(--on-green);color:#04130a;box-shadow:0 0 12px var(--on-glow)}
+.zone-source,.timer-select,.modal-input{width:100%;padding:.5rem .65rem;border-radius:9px;background:var(--surface2);border:1px solid var(--border);color:var(--text);outline:none;min-height:44px}
+.zone-source:focus,.timer-select:focus,.modal-input:focus{border-color:var(--accent)}
+.vol-row,.autooff-row{display:flex;align-items:center;gap:.6rem}
+.vol-label,.mini-label{font-size:.76rem;color:var(--text-muted);min-width:2.3rem}
+input[type=range]{flex:1;-webkit-appearance:none;height:4px;border-radius:3px;background:var(--surface2);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+.vol-num{font-size:.85rem;font-weight:700;color:var(--accent);min-width:2rem;text-align:right}
+.status-chip,.autooff-chip{font-size:.75rem;padding:.25rem .6rem;border-radius:999px;width:fit-content;background:var(--surface2);color:var(--text-muted);min-height:24px;display:inline-flex;align-items:center}
+.status-chip.on{background:var(--on-glow);color:var(--on-green);font-weight:700}
+.autooff-block{display:flex;flex-direction:column;gap:.45rem;padding:.75rem;border-radius:12px;background:linear-gradient(180deg,var(--surface2),transparent);border:1px solid var(--border)}
+.toggle{position:relative;width:46px;height:28px;border-radius:999px;background:var(--border);flex-shrink:0}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform var(--transition)}
+.toggle.on{background:var(--accent)}
+.toggle.on::after{transform:translateX(18px)}
+.autooff-chip.enabled{background:#f59e0b22;color:var(--warning);font-weight:700}
+.emoji-picker{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:.75rem;display:grid;grid-template-columns:repeat(6,1fr);gap:.4rem;box-shadow:var(--shadow);z-index:80;width:220px}
+.emoji-picker.mobile-sheet{left:12px!important;right:12px!important;bottom:12px!important;top:auto!important;width:auto;grid-template-columns:repeat(5,1fr);padding:1rem;border-radius:18px;box-shadow:0 20px 40px rgba(0,0,0,.45)}
+.hidden{display:none!important}
+.emoji-opt{font-size:1.45rem;padding:.5rem;border-radius:10px;min-height:44px;display:flex;align-items:center;justify-content:center}
+.emoji-opt:hover{background:var(--surface2)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:1rem;z-index:60}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem;width:min(100%,420px);box-shadow:var(--shadow)}
+.modal h2{margin-bottom:1rem;font-size:1.05rem}
+.modal-row{display:flex;gap:.75rem;align-items:center;margin-bottom:.75rem}
+.modal-row label{width:5rem;font-size:.85rem;color:var(--text-muted)}
+.modal-actions{display:flex;justify-content:flex-end;gap:.75rem;margin-top:.75rem}
+.btn-primary,.btn-secondary{padding:.55rem 1rem;border-radius:9px;min-height:44px}
+.btn-primary{background:var(--accent);color:#fff;font-weight:700}
+.btn-secondary{background:var(--surface2);border:1px solid var(--border)}
+#offline-banner{display:none;background:#f59e0b;color:#111;padding:.45rem;text-align:center;font-size:.85rem;font-weight:700}
+#offline-banner.visible{display:block}
+@media(max-width:520px){header{align-items:flex-start}.header-actions{gap:.4rem}.card{padding:.95rem}.card-header{gap:.55rem}.zone-name-input{font-size:.98rem}}
+</style>
+</head>
+<body>
+<div id="offline-banner">⚠️ Serial port offline – amp commands will fail</div>
+<header>
+  <div class="header-title">🎵 Whole-Home Audio</div>
+  <div class="header-actions">
+    <button class="btn-icon" id="sources-btn" type="button">🎛 Sources</button>
+    <button class="btn-icon" id="theme-btn" type="button">🌙</button>
+  </div>
+</header>
+<div class="grid" id="zone-grid"></div>
+<div class="emoji-picker hidden" id="emoji-picker"></div>
+<div class="modal-overlay hidden" id="sources-modal">
+  <div class="modal">
+    <h2>🎛 Source Names</h2>
+    <div id="source-inputs"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="sources-cancel" type="button">Cancel</button>
+      <button class="btn-primary" id="sources-save" type="button">Save</button>
+    </div>
+  </div>
+</div>
+<script>
+'use strict';
+const EMOJI_LIST=['🛋️','🍳','🛏️','💻','🌿','🏠','🎵','📺','🎸','🎹','🛁','🏋️','🌞','🌙','🍽️','🔊','🎤','🏡','🌊','🎮','📚','🎨','🌸','🧑‍🍳','🍕','☕','🪴','🎧','🔥','🚿'];
+const ZONES=[1,2,3,4,5,6], TIMER_CHOICES=[30,60,90,120,180,240], POLL_AMP_MS=30000, POLL_CFG_MS=60000, VOL_DEBOUNCE_MS=300;
+let cfg={}, ampState={}, volTimers={}, pickerZone=null;
+const picker=document.getElementById('emoji-picker');
+
+async function apiFetch(method,path,body){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(body!==undefined) opts.body=JSON.stringify(body);
+  const res=await fetch(path,opts);
+  if(!res.ok){const err=await res.json().catch(()=>({error:res.statusText})); throw new Error(err.error||res.statusText);}
+  return res.json();
 }
+
+async function patchConfig(slice){ cfg=await apiFetch('PATCH','/api/config',slice); }
+function applyTheme(theme){ document.documentElement.dataset.theme=theme; document.getElementById('theme-btn').textContent=theme==='dark'?'🌞':'🌙'; }
+function escHtml(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtRemaining(ms){ if(ms==null) return 'Disabled'; const total=Math.ceil(ms/60000); const h=Math.floor(total/60), m=total%60; return h?`${h}h ${m}m left`:`${m}m left`; }
+function getZoneCfg(zone){ return (cfg.zones||{})[zone]||{name:`Zone ${zone}`,icon:'🔊'}; }
+function getZoneAutomationCfg(zone){ const a=cfg.automation||{}; const z=(a.zones||{})[zone]||{}; return {enabled:!!(a.enabled&&z.enabled), idleMinutes:z.idleMinutes||a.defaultIdleMinutes||120}; }
+function buildSourceOptions(selected){ return [1,2,3,4,5,6].map(s=>`<option value="${s}"${s===selected?' selected':''}>${escHtml((cfg.sourceNames||{})[s]||`Source ${s}`)}</option>`).join(''); }
+function buildTimerOptions(selected){ return TIMER_CHOICES.map(m=>`<option value="${m}"${m===selected?' selected':''}>${m} min</option>`).join(''); }
+
+function bindCardEvents(zone){
+  document.getElementById(`power-${zone}`).addEventListener('click', async ()=>{
+    const cur=!!(ampState[zone]&&ampState[zone].power);
+    await sendPower(zone,!cur);
+  });
+  document.getElementById(`icon-btn-${zone}`).addEventListener('click', e=>openEmojiPicker(zone,e.currentTarget));
+  const nameInput=document.getElementById(`name-${zone}`);
+  const saveName=()=>{
+    const name=nameInput.value.trim()||`Zone ${zone}`;
+    cfg.zones ||= {}; cfg.zones[zone] ||= {}; cfg.zones[zone].name=name;
+    patchConfig({zones:{[zone]:{name}}}).catch(console.error);
+  };
+  nameInput.addEventListener('blur', saveName);
+  nameInput.addEventListener('keydown', e=>{ if(e.key==='Enter') nameInput.blur(); });
+  document.getElementById(`src-${zone}`).addEventListener('change', async e=>sendSource(zone,parseInt(e.target.value,10)));
+  document.getElementById(`vol-${zone}`).addEventListener('input', e=>{
+    const vol=parseInt(e.target.value,10);
+    const n=document.getElementById(`volnum-${zone}`);
+    if(n) n.textContent=String(vol);
+    clearTimeout(volTimers[zone]);
+    volTimers[zone]=setTimeout(()=>sendVolume(zone,vol),VOL_DEBOUNCE_MS);
+  });
+  document.getElementById(`auto-toggle-${zone}`).addEventListener('click', ()=>toggleAutoOff(zone));
+  document.getElementById(`timer-${zone}`).addEventListener('change', e=>setAutoOffMinutes(zone,parseInt(e.target.value,10)));
+}
+
+function buildCard(zone){
+  const zCfg=getZoneCfg(zone);
+  const state=ampState[zone]||{power:false,source:1,volume:0,automation:{enabled:false,idleMinutes:120,remainingMs:null}};
+  const autoCfg=getZoneAutomationCfg(zone);
+  const card=document.createElement('div');
+  card.className=`card${state.power?' powered':''}`;
+  card.id=`card-${zone}`;
+  card.innerHTML=`<div class="card-header"><button class="zone-icon-btn" id="icon-btn-${zone}" type="button">${zCfg.icon}</button><input class="zone-name-input" id="name-${zone}" value="${escHtml(zCfg.name)}" maxlength="24" aria-label="Zone name"><button class="power-btn${state.power?' on':''}" id="power-${zone}" aria-pressed="${state.power}" type="button"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 2v10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path><path d="M7.05 4.93a8 8 0 1 0 9.9 0" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path></svg></button></div><select class="zone-source" id="src-${zone}">${buildSourceOptions(state.source)}</select><div class="vol-row"><span class="vol-label">🔈</span><input type="range" id="vol-${zone}" min="0" max="38" value="${state.volume}"><span class="vol-num" id="volnum-${zone}">${state.volume}</span></div><span class="status-chip${state.power?' on':''}" id="chip-${zone}">${state.power?`▶ ${escHtml((cfg.sourceNames||{})[state.source]||`Source ${state.source}`)}`:'Off'}</span><div class="autooff-block"><div class="autooff-row"><span class="mini-label">Auto-off</span><button class="toggle${autoCfg.enabled?' on':''}" id="auto-toggle-${zone}" aria-pressed="${autoCfg.enabled}" type="button"></button><span class="autooff-chip${autoCfg.enabled?' enabled':''}" id="auto-chip-${zone}">${autoCfg.enabled?fmtRemaining(state.automation&&state.automation.remainingMs):'Disabled'}</span></div><div class="autooff-row"><span class="mini-label">Timer</span><select class="timer-select" id="timer-${zone}" ${autoCfg.enabled?'':'disabled'}>${buildTimerOptions(autoCfg.idleMinutes)}</select></div></div>`;
+  return card;
+}
+
+function renderInitialGrid(){
+  const grid=document.getElementById('zone-grid');
+  grid.innerHTML='';
+  ZONES.forEach(z=>{
+    const card=buildCard(z);
+    grid.appendChild(card);
+    bindCardEvents(z);
+  });
+}
+
+function syncConfigToVisibleUI(nextCfg){
+  ZONES.forEach(zone=>{
+    const nameEl=document.getElementById(`name-${zone}`), iconEl=document.getElementById(`icon-btn-${zone}`), srcEl=document.getElementById(`src-${zone}`), timerEl=document.getElementById(`timer-${zone}`), toggleEl=document.getElementById(`auto-toggle-${zone}`), chipEl=document.getElementById(`auto-chip-${zone}`);
+    const z=(nextCfg.zones||{})[zone]||{};
+    const auto=((nextCfg.automation||{}).zones||{})[zone]||{};
+    const enabled=!!((nextCfg.automation||{}).enabled && auto.enabled);
+    if(nameEl && document.activeElement!==nameEl) nameEl.value=z.name||`Zone ${zone}`;
+    if(iconEl) iconEl.textContent=z.icon||'🔊';
+    if(srcEl) srcEl.innerHTML=buildSourceOptions(ampState[zone] ? ampState[zone].source : 1);
+    if(timerEl && auto.idleMinutes) timerEl.value=String(auto.idleMinutes);
+    if(timerEl) timerEl.disabled=!enabled;
+    if(toggleEl){ toggleEl.classList.toggle('on',enabled); toggleEl.setAttribute('aria-pressed',String(enabled)); }
+    if(chipEl && !(ampState[zone]&&ampState[zone].automation&&ampState[zone].automation.enabled)){
+      chipEl.textContent=enabled?'Waiting for activity':'Disabled';
+      chipEl.className=`autooff-chip${enabled?' enabled':''}`;
+    }
+  });
+}
+
+function applyZoneState(zone,state){
+  ampState[zone]=state;
+  const card=document.getElementById(`card-${zone}`); if(!card) return;
+  card.classList.toggle('powered',!!state.power);
+  const powerBtn=document.getElementById(`power-${zone}`), src=document.getElementById(`src-${zone}`), vol=document.getElementById(`vol-${zone}`), volNum=document.getElementById(`volnum-${zone}`), chip=document.getElementById(`chip-${zone}`), auto=document.getElementById(`auto-chip-${zone}`), timer=document.getElementById(`timer-${zone}`), toggle=document.getElementById(`auto-toggle-${zone}`);
+  if(powerBtn){ powerBtn.classList.toggle('on',!!state.power); powerBtn.setAttribute('aria-pressed',String(!!state.power)); }
+  if(src && String(src.value)!==String(state.source)) src.value=String(state.source);
+  if(vol && String(vol.value)!==String(state.volume)) vol.value=String(state.volume);
+  if(volNum) volNum.textContent=String(state.volume);
+  if(chip){ chip.className=`status-chip${state.power?' on':''}`; chip.textContent=state.power?`▶ ${(cfg.sourceNames||{})[state.source]||`Source ${state.source}`}`:'Off'; }
+  const enabled=!!(state.automation&&state.automation.enabled);
+  if(auto){ auto.className=`autooff-chip${enabled?' enabled':''}`; auto.textContent=enabled?fmtRemaining(state.automation.remainingMs):'Disabled'; }
+  if(timer){ timer.disabled=!enabled; if(state.automation&&state.automation.idleMinutes) timer.value=String(state.automation.idleMinutes); }
+  if(toggle){ toggle.classList.toggle('on',enabled); toggle.setAttribute('aria-pressed',String(enabled)); }
+}
+
+async function fetchZoneState(zone){
+  try{ const s=await apiFetch('GET',`/api/state?zone=${zone}`); applyZoneState(zone,s); }
+  catch(e){ console.warn(`[zone ${zone}] state fetch failed:`,e.message); }
+}
+
+async function pollAmpState(){ ZONES.forEach((z,i)=>setTimeout(()=>fetchZoneState(z),i*200)); }
+async function pollConfig(){ try{ const fresh=await apiFetch('GET','/api/config'); cfg=fresh; applyTheme(cfg.theme); syncConfigToVisibleUI(cfg); }catch(e){ console.warn('[config] poll failed:',e.message); } }
+async function checkHealth(){ try{ const h=await apiFetch('GET','/api/health'); document.getElementById('offline-banner').classList.toggle('visible', !h.serialOpen); }catch(_e){} }
+
+async function sendPower(zone,on){ try{ const r=await apiFetch('POST',`/api/zone/${zone}/power`,{on}); applyZoneState(zone,{...(ampState[zone]||{}),power:r.power,automation:r.automation}); }catch(e){ console.error(e.message); } }
+async function sendSource(zone,source){ try{ const r=await apiFetch('POST',`/api/zone/${zone}/source`,{source}); applyZoneState(zone,{...(ampState[zone]||{}),source,automation:r.automation}); }catch(e){ console.error(e.message); } }
+async function sendVolume(zone,volume){ if(ampState[zone] && Number(ampState[zone].volume)===Number(volume)) return; try{ const r=await apiFetch('POST',`/api/zone/${zone}/volume`,{volume}); applyZoneState(zone,{...(ampState[zone]||{}),volume:r.volume,automation:r.automation}); }catch(e){ console.error(e.message); } }
+
+async function toggleAutoOff(zone){
+  cfg.automation ||= {enabled:true,defaultIdleMinutes:120,zones:{}};
+  cfg.automation.enabled=true; cfg.automation.zones ||= {};
+  const cur=getZoneAutomationCfg(zone);
+  cfg.automation.zones[zone]={enabled:!cur.enabled,idleMinutes:cur.idleMinutes||120};
+  syncConfigToVisibleUI(cfg);
+  try{ await patchConfig({automation:{enabled:true,zones:{[zone]:cfg.automation.zones[zone]}}}); await fetchZoneState(zone); }catch(e){ console.error(e.message); }
+}
+
+async function setAutoOffMinutes(zone,idleMinutes){
+  cfg.automation ||= {enabled:true,defaultIdleMinutes:120,zones:{}};
+  cfg.automation.enabled=true; cfg.automation.zones ||= {};
+  const cur=getZoneAutomationCfg(zone);
+  cfg.automation.zones[zone]={enabled:cur.enabled,idleMinutes};
+  syncConfigToVisibleUI(cfg);
+  try{ await patchConfig({automation:{enabled:true,zones:{[zone]:{enabled:cur.enabled,idleMinutes}}}}); await fetchZoneState(zone); }catch(e){ console.error(e.message); }
+}
+
+function openEmojiPicker(zone,anchor){
+  pickerZone=zone;
+  picker.innerHTML=EMOJI_LIST.map(e=>`<button class="emoji-opt" type="button" data-emoji="${e}">${e}</button>`).join('');
+  picker.classList.remove('hidden');
+  const mobile = window.innerWidth <= 520 || matchMedia('(hover: none)').matches;
+  picker.classList.toggle('mobile-sheet', mobile);
+  if (mobile) {
+    picker.style.left='12px'; picker.style.right='12px'; picker.style.top='auto'; picker.style.bottom='12px';
+    return;
+  }
+  const rect=anchor.getBoundingClientRect();
+  let top=rect.bottom+window.scrollY+6, left=rect.left+window.scrollX;
+  if(left+220>window.innerWidth) left=window.innerWidth-228;
+  if(top+220>window.innerHeight+window.scrollY) top=rect.top+window.scrollY-230;
+  picker.style.right='auto'; picker.style.bottom='auto'; picker.style.top=top+'px'; picker.style.left=left+'px';
+}
+
+picker.addEventListener('click', async e=>{
+  const btn=e.target.closest('.emoji-opt');
+  if(!btn || pickerZone===null) return;
+  const zone=pickerZone, icon=btn.dataset.emoji;
+  cfg.zones ||= {}; cfg.zones[zone] ||= {}; cfg.zones[zone].icon=icon;
+  const iconBtn=document.getElementById(`icon-btn-${zone}`); if(iconBtn) iconBtn.textContent=icon;
+  picker.classList.add('hidden'); picker.classList.remove('mobile-sheet'); pickerZone=null;
+  try{ await patchConfig({zones:{[zone]:{icon}}}); }catch(err){ console.error(err.message); }
+});
+
+document.addEventListener('click', e=>{
+  if(!picker.classList.contains('hidden') && !picker.contains(e.target) && !e.target.closest('.zone-icon-btn')){
+    picker.classList.add('hidden'); picker.classList.remove('mobile-sheet'); pickerZone=null;
+  }
+});
+
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ picker.classList.add('hidden'); picker.classList.remove('mobile-sheet'); pickerZone=null; } });
+
+function openSourcesModal(){
+  const c=document.getElementById('source-inputs');
+  c.innerHTML=[1,2,3,4,5,6].map(s=>`<div class="modal-row"><label for="src-name-${s}">Source ${s}</label><input class="modal-input" id="src-name-${s}" value="${escHtml((cfg.sourceNames||{})[s]||`Source ${s}`)}" maxlength="24"></div>`).join('');
+  document.getElementById('sources-modal').classList.remove('hidden');
+}
+
+document.getElementById('sources-save').addEventListener('click', async ()=>{
+  const names={};
+  [1,2,3,4,5,6].forEach(s=>names[s]=document.getElementById(`src-name-${s}`).value.trim()||`Source ${s}`);
+  cfg.sourceNames={...(cfg.sourceNames||{}),...names};
+  syncConfigToVisibleUI(cfg);
+  try{ await patchConfig({sourceNames:names}); }catch(e){ console.error(e.message); }
+  document.getElementById('sources-modal').classList.add('hidden');
+});
+
+document.getElementById('sources-cancel').addEventListener('click', ()=>document.getElementById('sources-modal').classList.add('hidden'));
+document.getElementById('sources-modal').addEventListener('click', e=>{ if(e.target.id==='sources-modal') e.target.classList.add('hidden'); });
+
+async function init(){
+  try{ cfg=await apiFetch('GET','/api/config'); }
+  catch(e){ console.error(e.message); cfg={theme:'dark',sourceNames:{},zones:{},automation:{enabled:true,defaultIdleMinutes:120,zones:{6:{enabled:true,idleMinutes:120}}}}; }
+  applyTheme(cfg.theme || 'dark');
+  renderInitialGrid();
+  document.getElementById('theme-btn').addEventListener('click', async ()=>{
+    const next=(cfg.theme==='dark')?'light':'dark';
+    cfg.theme=next; applyTheme(next);
+    try{ await patchConfig({theme:next}); }catch(e){ console.error(e.message); }
+  });
+  document.getElementById('sources-btn').addEventListener('click', openSourcesModal);
+  ZONES.forEach((z,i)=>setTimeout(()=>fetchZoneState(z),i*200));
+  setInterval(pollAmpState,POLL_AMP_MS);
+  setInterval(pollConfig,POLL_CFG_MS);
+  setInterval(()=>{
+    ZONES.forEach(z=>{
+      if(ampState[z] && ampState[z].automation && ampState[z].automation.enabled){
+        const chip=document.getElementById(`auto-chip-${z}`);
+        if(chip && ampState[z].automation.remainingMs!=null){
+          ampState[z].automation.remainingMs=Math.max(0,ampState[z].automation.remainingMs-1000);
+          chip.textContent=fmtRemaining(ampState[z].automation.remainingMs);
+        }
+      }
+    });
+  },1000);
+  checkHealth();
+}
+
+init();
+</script>
+</body>
+</html>
