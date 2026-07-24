@@ -22,6 +22,9 @@ const SERIAL_PATH = process.env.SERIAL_PATH || "/dev/ttyUSB0";
 const CONFIG_PATH = process.env.CONFIG_PATH || path.join(__dirname, "config.json");
 const DEBUG_SERIAL = process.env.DEBUG_SERIAL === "1";
 
+let serialReadyResolve;
+const serialReady = new Promise(resolve => { serialReadyResolve = resolve; });
+
 const CONFIG_DEFAULTS = {
   theme: "dark",
   sourceNames: {
@@ -148,6 +151,7 @@ serial.open(err => {
     console.warn("[serial] Running in offline mode");
   } else {
     console.log(`[serial] Opened ${SERIAL_PATH} @ 9600 8-N-1`);
+    serialReadyResolve();
   }
 });
 
@@ -166,7 +170,9 @@ function hexDump(buf) {
 }
 
 function writeCommand(cmd) {
-  return enqueue(() => new Promise((resolve, reject) => {
+  return enqueue(async () => {
+    await serialReady;
+    return new Promise((resolve, reject) => {
     if (!serial.isOpen) return reject(new Error("Serial port not open"));
     const buf = Buffer.concat([Buffer.from(cmd, "ascii"), TERMINATOR]);
     if (DEBUG_SERIAL) console.log(`[serial] TX ${JSON.stringify(cmd)} [${hexDump(buf)}]`);
@@ -180,11 +186,13 @@ function writeCommand(cmd) {
         });
       });
     });
-  }));
+  });
 }
 
 function queryCommand(cmd) {
-  return enqueue(() => new Promise((resolve, reject) => {
+  return enqueue(async () => {
+    await serialReady;
+    return new Promise((resolve, reject) => {
     if (!serial.isOpen) return reject(new Error("Serial port not open"));
     const SETTLE_MS = 200;
     const TIMEOUT_MS = 3000;
@@ -232,7 +240,7 @@ function queryCommand(cmd) {
         }
       });
     });
-  }));
+  });
 }
 
 function parseZoneStatus(raw, zone) {
@@ -320,7 +328,9 @@ function markZoneActivity(zone, reason) {
 function cancelZoneAutomation(zone, reason) {
   clearAutoOff(zone);
   delete autoOffState.lastActivity[zone];
-  console.log(`[autooff] zone ${zone} timer cleared: ${reason}`);
+  if (reason !== 'startup-off') {
+    console.log(`[autooff] zone ${zone} timer cleared: ${reason}`);
+  }
 }
 
 function scheduleAutoOff(zone, reason) {
@@ -344,6 +354,7 @@ function scheduleAutoOff(zone, reason) {
 }
 
 async function bootstrapAutoOffFromAmp() {
+  await serialReady;
   for (let i = 0; i < 6; i++) {
     const zone = i + 1;
     setTimeout(async () => {
