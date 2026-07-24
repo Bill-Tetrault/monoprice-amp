@@ -47,20 +47,14 @@ const path = require('path');
 const express = require('express');
 const { SerialPort } = require('serialport');
 
-// Environment variables
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const SERIAL_PATH = process.env.SERIAL_PATH || '/dev/ttyUSB0';
 const CONFIG_PATH = process.env.CONFIG_PATH || path.resolve('./config.json');
-
-// Serial terminator CR+LF: two bytes 0x0D 0x0A
 const TERMINATOR = Buffer.from([0x0D, 0x0A]);
 
-// Express app
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-
-// --- Config store -----------------------------------------------------------
 
 const DEFAULT_CONFIG = {
   theme: 'dark',
@@ -73,12 +67,24 @@ const DEFAULT_CONFIG = {
     '6': 'Source 6'
   },
   zones: {
-    '1': { name: 'Living Room', icon: '🛋️', maxVolume: 38 },
-    '2': { name: 'Kitchen', icon: '🍳', maxVolume: 38 },
-    '3': { name: 'Master Bed', icon: '🛏️', maxVolume: 38 },
-    '4': { name: 'Office', icon: '💻', maxVolume: 38 },
-    '5': { name: 'Patio', icon: '🌿', maxVolume: 38 },
-    '6': { name: 'Garage', icon: '🏠', maxVolume: 30 }
+    '1': { name: 'Kitchen', icon: '🍳', maxVolume: 38 },
+    '2': { name: 'Laundry', icon: '🧺', maxVolume: 38 },
+    '3': { name: 'Garage', icon: '🚗', maxVolume: 30 },
+    '4': { name: 'Master Bedroom', icon: '🛏️', maxVolume: 38 },
+    '5': { name: 'Bathroom', icon: '🛁', maxVolume: 38 },
+    '6': { name: 'Patio', icon: '🌿', maxVolume: 30 }
+  },
+  automation: {
+    enabled: true,
+    defaultMinutes: 120,
+    zones: {
+      '1': { enabled: false, minutes: 120 },
+      '2': { enabled: false, minutes: 120 },
+      '3': { enabled: true, minutes: 120 },
+      '4': { enabled: false, minutes: 120 },
+      '5': { enabled: false, minutes: 120 },
+      '6': { enabled: true, minutes: 120 }
+    }
   }
 };
 
@@ -129,13 +135,6 @@ function deepMerge(target, src) {
   return target;
 }
 
-// --- Serial port and status -------------------------------------------------
-
-/**
- * Serial connection status used by the frontend banner.
- * This is event-driven and is a better source of truth than checking only once
- * at startup, because SerialPort opens asynchronously by default. [web:67][web:81]
- */
 const serialStatus = {
   online: false,
   path: SERIAL_PATH,
@@ -145,11 +144,6 @@ const serialStatus = {
   lastActivityAt: null
 };
 
-/**
- * SerialPort instance in raw Buffer mode.
- * We do not use ReadlineParser or any parser pipe because the amp's status
- * response does not arrive as a clean line terminator sequence. [web:14]
- */
 const serial = new SerialPort({
   path: SERIAL_PATH,
   baudRate: 9600,
@@ -182,8 +176,8 @@ serial.on('data', () => {
   serialStatus.lastActivityAt = new Date().toISOString();
 });
 
-// Promise chain to serialize all RS-232 transactions.
 let serialQueue = Promise.resolve();
+const autoOffTimers = {};
 
 function enqueueSerial(fn) {
   serialQueue = serialQueue.then(() => fn());
@@ -346,8 +340,6 @@ function parseZoneStatus(raw, zone) {
   };
 }
 
-// --- High-level amp helpers -------------------------------------------------
-
 function validateZone(zone) {
   const z = Number(zone);
   if (!Number.isInteger(z) || z < 1 || z > 6) {
@@ -397,6 +389,51 @@ function clampBalance(value) {
   return v;
 }
 
+function getAutoOffSettings(zone) {
+  const globalAutomation = config.automation || {};
+  const zoneAutomation = globalAutomation.zones?.[String(zone)] || {};
+  const enabled = Boolean(globalAutomation.enabled && zoneAutomation.enabled);
+  const minutes = Number(zoneAutomation.minutes || globalAutomation.defaultMinutes || 120);
+  return {
+    enabled,
+    minutes: Number.isFinite(minutes) && minutes > 0 ? minutes : 120
+  };
+}
+
+function cancelAutoOff(zone) {
+  const zKey = String(zone);
+  if (autoOffTimers[zKey]) {
+    clearTimeout(autoOffTimers[zKey]);
+    autoOffTimers[zKey] = null;
+  }
+}
+
+function scheduleAutoOff(zone) {
+  const zKey = String(zone);
+  const settings = getAutoOffSettings(zone);
+
+  cancelAutoOff(zKey);
+
+  if (!settings.enabled) {
+    return;
+  }
+
+  const ms = settings.minutes * 60 * 1000;
+  autoOffTimers[zKey] = setTimeout(async () => {
+    try {
+      const state = await getZoneState(zone);
+      if (state.power) {
+        await setZonePower(zone, false);
+        console.log(`Auto-off: zone ${zone} powered off after ${settings.minutes} minutes.`);
+      }
+    } catch (err) {
+      console.error('Auto-off failed for zone', zone, err);
+    } finally {
+      autoOffTimers[zKey] = null;
+    }
+  }, ms);
+}
+
 async function getZoneState(zone) {
   const z = validateZone(zone);
   const prefix = zonePrefix(z);
@@ -410,6 +447,10 @@ async function setZonePower(zone, on) {
   const prefix = zonePrefix(z);
   const cmd = `<${prefix}PR${on ? '01' : '00'}`;
   await writeCommand(cmd);
+
+  if (on) scheduleAutoOff(z);
+  else cancelAutoOff(z);
+
   return { zone: z, power: !!on };
 }
 
@@ -420,6 +461,7 @@ async function setZoneSource(zone, src) {
   const srcStr = String(s).padStart(2, '0');
   const cmd = `<${prefix}CH${srcStr}`;
   await writeCommand(cmd);
+  scheduleAutoOff(z);
   return { zone: z, source: s };
 }
 
@@ -430,6 +472,7 @@ async function setZoneVolume(zone, vol) {
   const volStr = String(v).padStart(2, '0');
   const cmd = `<${prefix}VO${volStr}`;
   await writeCommand(cmd);
+  scheduleAutoOff(z);
   return { zone: z, volume: v };
 }
 
@@ -438,6 +481,7 @@ async function setZoneMute(zone, mute) {
   const prefix = zonePrefix(z);
   const cmd = `<${prefix}MU${mute ? '01' : '00'}`;
   await writeCommand(cmd);
+  scheduleAutoOff(z);
   return { zone: z, mute: !!mute };
 }
 
@@ -448,6 +492,7 @@ async function setZoneTreble(zone, treble) {
   const tStr = String(t).padStart(2, '0');
   const cmd = `<${prefix}TR${tStr}`;
   await writeCommand(cmd);
+  scheduleAutoOff(z);
   return { zone: z, treble: t };
 }
 
@@ -458,6 +503,7 @@ async function setZoneBass(zone, bass) {
   const bStr = String(b).padStart(2, '0');
   const cmd = `<${prefix}BS${bStr}`;
   await writeCommand(cmd);
+  scheduleAutoOff(z);
   return { zone: z, bass: b };
 }
 
@@ -468,10 +514,9 @@ async function setZoneBalance(zone, balance) {
   const bStr = String(b).padStart(2, '0');
   const cmd = `<${prefix}BL${bStr}`;
   await writeCommand(cmd);
+  scheduleAutoOff(z);
   return { zone: z, balance: b };
 }
-
-// --- API endpoints ----------------------------------------------------------
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true });
@@ -612,7 +657,7 @@ app.patch('/api/config', (req, res) => {
       return res.status(400).json({ error: 'body must be an object' });
     }
 
-    const allowedTop = new Set(['theme', 'sourceNames', 'zones']);
+    const allowedTop = new Set(['theme', 'sourceNames', 'zones', 'automation']);
     for (const key of Object.keys(body)) {
       if (!allowedTop.has(key)) {
         return res.status(400).json({ error: `unknown top-level key: ${key}` });
@@ -666,6 +711,46 @@ app.patch('/api/config', (req, res) => {
       }
     }
 
+    if (body.automation !== undefined) {
+      const a = body.automation;
+      if (typeof a !== 'object' || a === null || Array.isArray(a)) {
+        return res.status(400).json({ error: 'automation must be an object' });
+      }
+      if (a.enabled !== undefined && typeof a.enabled !== 'boolean') {
+        return res.status(400).json({ error: 'automation.enabled must be true or false' });
+      }
+      if (a.defaultMinutes !== undefined) {
+        const minutes = Number(a.defaultMinutes);
+        if (!Number.isFinite(minutes) || minutes < 1) {
+          return res.status(400).json({ error: 'automation.defaultMinutes must be >= 1' });
+        }
+        a.defaultMinutes = minutes;
+      }
+      if (a.zones !== undefined) {
+        if (typeof a.zones !== 'object' || a.zones === null || Array.isArray(a.zones)) {
+          return res.status(400).json({ error: 'automation.zones must be an object' });
+        }
+        for (const [zoneKey, zoneVal] of Object.entries(a.zones)) {
+          if (!['1', '2', '3', '4', '5', '6'].includes(zoneKey)) {
+            return res.status(400).json({ error: `automation zone must be 1-6 (got ${zoneKey})` });
+          }
+          if (typeof zoneVal !== 'object' || zoneVal === null || Array.isArray(zoneVal)) {
+            return res.status(400).json({ error: `automation.zones["${zoneKey}"] must be an object` });
+          }
+          if (zoneVal.enabled !== undefined && typeof zoneVal.enabled !== 'boolean') {
+            return res.status(400).json({ error: `automation.zones["${zoneKey}"].enabled must be true or false` });
+          }
+          if (zoneVal.minutes !== undefined) {
+            const minutes = Number(zoneVal.minutes);
+            if (!Number.isFinite(minutes) || minutes < 1) {
+              return res.status(400).json({ error: `automation.zones["${zoneKey}"].minutes must be >= 1` });
+            }
+            zoneVal.minutes = minutes;
+          }
+        }
+      }
+    }
+
     config = deepMerge(config, body);
     writeConfig(config);
     res.json(config);
@@ -673,29 +758,6 @@ app.patch('/api/config', (req, res) => {
     res.status(500).json({ error: err.message || 'internal error' });
   }
 });
-
-/**
- * systemd unit example:
- *
- * [Unit]
- * Description=Monoprice 10761 Web Controller
- * After=network.target
- *
- * [Service]
- * Type=simple
- * User=pi
- * WorkingDirectory=/opt/monoprice-amp
- * Environment=NODE_ENV=production
- * Environment=PORT=3000
- * Environment=SERIAL_PATH=/dev/ttyUSB0
- * Environment=CONFIG_PATH=/opt/monoprice-amp/config.json
- * ExecStart=/usr/bin/node /opt/monoprice-amp/server.js
- * Restart=on-failure
- * RestartSec=5
- *
- * [Install]
- * WantedBy=multi-user.target
- */
 
 app.listen(PORT, () => {
   console.log(`Monoprice 10761 controller listening on port ${PORT}`);
