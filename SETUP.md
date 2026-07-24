@@ -1,83 +1,102 @@
-# SETUP.md – Monoprice 10761 Amp Web Controller
+# Monoprice 10761 Web Controller – Raspberry Pi Setup
 
-## Prerequisites
-- Raspberry Pi running Raspberry Pi OS (64-bit recommended)
-- USB-to-serial adapter (USB-A to DB9 male, straight-through cable)
-- Monoprice 10761 powered on and connected
+This guide installs the Node.js web controller for the Monoprice 10761
+6‑zone whole‑home audio amplifier on a Raspberry Pi using a USB–RS‑232
+adapter. The app runs as a systemd service and exposes a mobile‑friendly
+web UI.
 
----
+## 1. Install Node.js 20 LTS (NodeSource)
 
-## 1. Install Node.js 20 LTS
+On Raspberry Pi OS:
 
 ```bash
-# Download and run the NodeSource setup script for Node 20 LTS
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
-
-# Verify
-node -v    # should print v20.x.x
-npm  -v
+node -v
+npm -v
 ```
 
----
+Confirm that `node -v` reports a 20.x version.
 
-## 2. Clone / copy the project
+## 2. Project layout and dependencies
+
+Create the project directory and copy files:
 
 ```bash
-sudo mkdir -p /opt/monoprice-amp
-sudo chown $USER:$USER /opt/monoprice-amp
-# Copy package.json, server.js, and the public/ folder into /opt/monoprice-amp/
+sudo mkdir -p /opt/monoprice-amp/public
+sudo chown -R $USER:$USER /opt/monoprice-amp
+cd /opt/monoprice-amp
 ```
 
----
+Place these files in `/opt/monoprice-amp`:
 
-## 3. Install dependencies
+- `package.json`
+- `server.js`
+- `public/index.html`
+
+Then install dependencies:
 
 ```bash
 cd /opt/monoprice-amp
 npm install
 ```
 
----
+This installs:
 
-## 4. Grant serial port access
+- `express` ^4.18
+- `serialport` ^12.0.0
 
-The user running the server must be in the `dialout` group:
+## 3. Give the user serial port access
+
+The USB‑to‑RS‑232 adapter appears as `/dev/ttyUSB0` (or similar). Add your user
+to the `dialout` group so Node can open the device without sudo:
 
 ```bash
 sudo usermod -aG dialout $USER
-# You must log out and log back in (or reboot) for this to take effect
+# Log out and log back in so group membership applies
 ```
 
-Verify your adapter path:
+You can verify the device path with:
 
 ```bash
-ls -l /dev/ttyUSB*   # typical output: /dev/ttyUSB0
-# OR
-ls -l /dev/ttyACM*   # some adapters enumerate here instead
+ls -l /dev/ttyUSB*
 ```
 
----
+Adjust `SERIAL_PATH` later if your adapter uses a different name.
 
-## 5. Test run
+## 4. Test run
+
+From the project directory:
 
 ```bash
 cd /opt/monoprice-amp
-SERIAL_PATH=/dev/ttyUSB0 PORT=3000 node server.js
+SERIAL_PATH=/dev/ttyUSB0 PORT=3000 npm start
 ```
 
-Open a browser on any device on your LAN:
+You should see:
+
+```text
+Monoprice 10761 controller listening on port 3000
 ```
-http://<raspberry-pi-ip>:3000
+
+Visit the web UI from any device on your network:
+
+```text
+http://<pi-ip>:3000
 ```
 
-Confirm the green "serial open" state (no offline banner appears at the top).
+Replace `<pi-ip>` with your Pi’s IP address (e.g. `192.168.1.50`).
 
----
+- The app will auto‑create `config.json` on first run with default theme,
+  source names, and zone names.
+- Zone power, source, volume, mute, tone, balance, and max‑volume caps are
+  available via the UI once the amp is connected over RS‑232.
 
-## 6. Install as a systemd service
+Press `Ctrl+C` to stop the test process.
 
-Create the unit file:
+## 5. systemd service
+
+Create a systemd unit file so the controller starts automatically on boot:
 
 ```bash
 sudo nano /etc/systemd/system/monoprice-amp.service
@@ -106,68 +125,59 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
-> **Note:** Change `User=pi` if your Raspberry Pi OS user is different (e.g., `User=bill`).
-> Confirm the node path with `which node` and update `ExecStart` if needed.
+Adjust `User=pi` if you use a different username, and update `SERIAL_PATH` if your
+adapter is not `/dev/ttyUSB0`.
 
-Enable and start:
+Then enable and start the service:
 
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable --now monoprice-amp
-
-# Check status
-sudo systemctl status monoprice-amp
-
-# Watch live logs
-sudo journalctl -u monoprice-amp -f
 ```
 
----
-
-## 7. Find your Pi's IP address
+Check status:
 
 ```bash
-hostname -I
+sudo systemctl status monoprice-amp
 ```
 
-Then from any phone, tablet, or computer on the same network:
-```
+You should see the service active and logs indicating that it is listening on
+port 3000.
+
+## 6. Accessing the UI
+
+From any device on your LAN:
+
+```text
 http://<pi-ip>:3000
 ```
 
----
+- The theme, source names, zone names, emojis, and max‑volume caps are stored in
+  `config.json` and shared by all browsers.
+- Each zone card shows power, source, and volume controls.
+- An **Advanced** panel per zone provides mute, bass, treble, balance, and
+  per‑zone max‑volume settings.
+- The server enforces the per‑zone max‑volume cap for all volume changes,
+  protecting outdoor speakers (e.g. Zone 6) from accidental over‑driving.
 
-## Troubleshooting
+If you change `PORT` in the systemd unit, update the URL accordingly.
 
-| Symptom | Fix |
-|---|---|
-| "Serial port not open" banner | Check `SERIAL_PATH`; confirm dialout group membership (re-login required) |
-| "Command Error." in logs | Verify straight-through DB9 cable (not null-modem); confirm zone 1–6 only |
-| Timeout on zone query | Check baud rate is 9600; confirm amp is powered on; reseat USB adapter |
-| Can't reach :3000 from LAN | Check Pi firewall: `sudo ufw allow 3000` |
-| `config.json` not saving | Check write permissions: `ls -la /opt/monoprice-amp/` |
+## 7. Updating the app
 
----
+To deploy code updates:
 
-## Environment variables reference
+```bash
+cd /opt/monoprice-amp
+git pull   # or copy updated files
+npm install
+sudo systemctl restart monoprice-amp
+```
 
-| Variable | Default | Description |
-|---|---|---|
-| `PORT` | `3000` | HTTP server port |
-| `SERIAL_PATH` | `/dev/ttyUSB0` | Serial device path |
-| `CONFIG_PATH` | `./config.json` | Path to UI config file |
+Check logs for any serial or config errors:
 
----
+```bash
+journalctl -u monoprice-amp -n 50 -f
+```
 
-## RS-232 cable pinout reminder
-
-This amp uses a **straight-through** DB9 cable (not a null-modem crossover):
-
-| Signal | DB9 Pin | Wire color (typical) |
-|---|---|---|
-| RX | 2 | Yellow |
-| TX | 3 | Orange |
-| GND | 5 | Black |
-
-Both ends connect the **same pin numbers** together.  
-The amp has a **female** DB9 socket; your USB adapter cable needs a **male** DB9 plug.
+The app will keep your existing `config.json` and apply any new defaults via
+server-side deep merge.

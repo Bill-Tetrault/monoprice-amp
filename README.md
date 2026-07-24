@@ -1,75 +1,156 @@
-# 🎵 Monoprice 10761 – RS-232 Web Controller
+# Monoprice 10761 Web Controller
 
-A clean, mobile-first web application to control a **Monoprice 10761 6-zone whole-home audio amplifier** over RS-232 from a Raspberry Pi. Control all six zones from any phone, tablet, or browser on your local network — no app install required.
-
-![Node.js](https://img.shields.io/badge/Node.js-20%20LTS-green?logo=node.js)
-![Express](https://img.shields.io/badge/Express-4.18-lightgrey?logo=express)
-![SerialPort](https://img.shields.io/badge/serialport-12-blue)
-![License](https://img.shields.io/badge/license-MIT-blue)
-
----
-
-## Screenshots
-
-| Dark Mode | Light Mode |
-|-----------|------------|
-| Six zone cards with power, source, and volume controls | Same UI with light theme toggled via 🌞/🌙 button |
-
----
+A production-ready web application for controlling a **Monoprice 10761** 6-zone whole-home audio amplifier over **RS-232** from a Raspberry Pi using a USB-to-serial adapter. The backend is built with **Node.js + Express**, and the frontend is a mobile-first single-page app in **vanilla JavaScript** with no build step. The Monoprice amplifier family exposes RS-232 control and zone status fields including power, source, volume, mute, treble, bass, and balance, which makes this architecture a good fit for a lightweight local controller.[1][2]
 
 ## Features
 
-- 🎛 **Full amp control** — power on/off, source select (6 inputs), volume (0–38) per zone
-- 📱 **Mobile-first responsive grid** — 1 col (phone) → 2 col (tablet) → 3 col (desktop)
-- 🌗 **Light / dark theme** toggle, persisted server-side
-- ✏️ **Inline zone name editing** — click any zone name, type, blur to save
-- 😀 **Emoji icon picker** — 30 icons, tap the zone emoji to change it
-- 🎛 **Source name editor** — rename all 6 inputs (e.g. "Apple TV", "Vinyl", "Spotify")
-- 🔄 **Multi-device sync** — config polls every 60 s so all browsers stay in sync
-- 💾 **Zero client-side persistence** — no localStorage; all state lives in `config.json` on the server
-- ⚡ **No build step** — single `index.html` with embedded CSS + JS (vanilla, no frameworks)
-- 🔌 **Graceful offline mode** — server starts even if serial port is unavailable; banner alerts you
+### Core control
 
----
+- Power on/off for each zone.[1]
+- Source selection for each zone.[1]
+- Volume control with server-side clamping to the amp's 0-38 range.[1]
+- Polling-based state refresh so multiple phones or browsers stay in sync through the server.[2]
 
-## Hardware Requirements
+### Advanced zone settings
 
-| Item | Details |
-|------|---------|
-| Amplifier | Monoprice 10761 6-Zone Whole-Home Audio Amplifier |
-| Controller | Raspberry Pi (any model with USB; Pi 4 recommended) |
-| Adapter | USB-to-Serial adapter (USB-A → DB9 male plug) |
-| Cable | Straight-through DB9 cable (**not** null-modem/crossover) |
+Each zone now includes an **Advanced** panel with the following controls:
 
-### DB9 Cable Pinout
+- Mute toggle.[2]
+- Treble slider.[2]
+- Bass slider.[2]
+- Balance slider with a center reset action.[1]
+- Per-zone max-volume cap stored in the server config and enforced on every volume write.[1]
 
-The amp uses a **straight-through** cable — same pin numbers on both ends:
+These controls map to the amplifier's zone status and command fields for `MU`, `TR`, `BS`, and `BL`, while the max-volume cap is enforced by the web controller before the RS-232 volume command is sent.[1][2]
 
-| Signal | DB9 Pin |
-|--------|---------|
-| RX     | 2       |
-| TX     | 3       |
-| GND    | 5       |
+### Server-side configuration
 
-> ⚠️ The amp has a **female** DB9 socket. Your USB adapter must present a **male** DB9 plug.
+All UI configuration is stored in a single `config.json` file on the Raspberry Pi, so browsers do not keep persistent local state. The server creates `config.json` from defaults on first run, deep-merges partial updates from `PATCH /api/config`, and writes the file atomically using a temporary file and rename operation.[2]
 
----
+Config includes:
 
-## Project Structure
+- Theme (`light` or `dark`).
+- Source names for inputs 1-6.
+- Zone names and icons.
+- Per-zone max-volume caps.
 
-```
+## Architecture
+
+```text
 /opt/monoprice-amp/
-├── package.json        # Dependencies: express ^4.18, serialport ^12
-├── server.js           # Backend: Express API + RS-232 serial logic + config I/O
-├── config.json         # Auto-created on first run; stores theme, zone names, source names
-├── SETUP.md            # Raspberry Pi install + systemd service instructions
-└── public/
-    └── index.html      # Full SPA — HTML + CSS + JS, no build step required
+  package.json
+  server.js
+  config.json         # auto-created on first run
+  public/
+    index.html
 ```
 
----
+### Backend
 
-## Quick Start
+The backend exposes REST endpoints for health checks, reading zone state, changing power/source/volume, updating advanced settings, and reading or patching configuration. Serial traffic is serialized through a Promise chain so commands never overlap on the RS-232 link, which is especially important because the amplifier returns query data differently from set commands.[1][2]
+
+### Frontend
+
+The frontend is a single HTML file with embedded CSS and JavaScript. On page load it fetches `/api/config`, renders the full UI from server data, then queries `/api/state?zone=N` for each zone in a staggered sequence to avoid piling requests onto the serial queue.[1]
+
+## RS-232 protocol notes
+
+These protocol details are important for reliable operation with the Monoprice amp family and match the validated behavior used in the controller implementation.[1][3]
+
+- Serial settings: `9600, 8-N-1`.[1]
+- Cable: straight-through DB9, not a null modem cable.[3]
+- Every command must end with `\r\n`.[3]
+- Zone prefix format is `1<zone>` using a single-digit zone number 1-6.[3]
+- Query commands return a `>` status record after echoed bytes.[1]
+- Set commands should resolve after serial drain and should not wait for a `>` response.[1]
+
+### Zone status fields
+
+The zone response includes 11 two-digit fields. This app uses these fields directly when parsing state.[1]
+
+| Field | Meaning |
+|-------|---------|
+| `PR` | Power [1] |
+| `MU` | Mute [1] |
+| `VO` | Volume [1] |
+| `TR` | Treble [1] |
+| `BS` | Bass [1] |
+| `BL` | Balance [1] |
+| `CH` | Source [1] |
+
+## API
+
+### Health
+
+- `GET /api/health` → `{ ok: true }`
+
+### Zone state
+
+- `GET /api/state?zone=N`
+- Response includes:
+  - `zone`
+  - `power`
+  - `source`
+  - `volume`
+  - `mute`
+  - `treble`
+  - `bass`
+  - `balance`
+
+### Zone control
+
+- `POST /api/zone/:zone/power` with `{ "on": true|false }`
+- `POST /api/zone/:zone/source` with `{ "source": 1-6 }`
+- `POST /api/zone/:zone/volume` with `{ "volume": 0-38 }`
+- `POST /api/zone/:zone/mute` with `{ "mute": true|false }`
+- `POST /api/zone/:zone/treble` with `{ "treble": 0-14 }`
+- `POST /api/zone/:zone/bass` with `{ "bass": 0-14 }`
+- `POST /api/zone/:zone/balance` with `{ "balance": 0-20 }`
+
+### Configuration
+
+- `GET /api/config`
+- `PATCH /api/config`
+
+Examples:
+
+```json
+{ "theme": "light" }
+```
+
+```json
+{ "zones": { "6": { "name": "Outdoor", "icon": "🌿", "maxVolume": 28 } } }
+```
+
+```json
+{ "sourceNames": { "3": "Apple TV" } }
+```
+
+## Config example
+
+```json
+{
+  "theme": "dark",
+  "sourceNames": {
+    "1": "Source 1",
+    "2": "Source 2",
+    "3": "Source 3",
+    "4": "Source 4",
+    "5": "Source 5",
+    "6": "Source 6"
+  },
+  "zones": {
+    "1": { "name": "Living Room", "icon": "🛋️", "maxVolume": 38 },
+    "2": { "name": "Kitchen", "icon": "🍳", "maxVolume": 38 },
+    "3": { "name": "Master Bed", "icon": "🛏️", "maxVolume": 38 },
+    "4": { "name": "Office", "icon": "💻", "maxVolume": 38 },
+    "5": { "name": "Patio", "icon": "🌿", "maxVolume": 38 },
+    "6": { "name": "Garage", "icon": "🏠", "maxVolume": 30 }
+  }
+}
+```
+
+## Installation
 
 ### 1. Install Node.js 20 LTS
 
@@ -78,170 +159,83 @@ curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 ```
 
-### 2. Install the app
-
-```bash
-sudo mkdir -p /opt/monoprice-amp/public
-# Copy server.js, package.json into /opt/monoprice-amp/
-# Copy public/index.html into /opt/monoprice-amp/public/
-cd /opt/monoprice-amp && npm install
-```
-
-### 3. Grant serial port access
-
-```bash
-sudo usermod -aG dialout $USER
-# Log out and back in for this to take effect
-```
-
-### 4. Run it
+### 2. Install dependencies
 
 ```bash
 cd /opt/monoprice-amp
-SERIAL_PATH=/dev/ttyUSB0 PORT=3000 node server.js
+npm install
 ```
 
-Open from any device on your network:
-```
-http://<raspberry-pi-ip>:3000
-```
-
-### 5. Run as a service (optional but recommended)
-
-See [SETUP.md](SETUP.md) for full systemd instructions. The short version:
+### 3. Enable serial access
 
 ```bash
+sudo usermod -aG dialout $USER
+```
+
+Log out and back in so the new group membership applies.
+
+### 4. Run manually for testing
+
+```bash
+SERIAL_PATH=/dev/ttyUSB0 PORT=3000 npm start
+```
+
+### 5. Access the app
+
+Open:
+
+```text
+http://<pi-ip>:3000
+```
+
+## systemd service
+
+Use this unit file to run the app on boot:
+
+```ini
+[Unit]
+Description=Monoprice 10761 Web Controller
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/monoprice-amp
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=SERIAL_PATH=/dev/ttyUSB0
+Environment=CONFIG_PATH=/opt/monoprice-amp/config.json
+ExecStart=/usr/bin/node /opt/monoprice-amp/server.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then enable it:
+
+```bash
+sudo systemctl daemon-reload
 sudo systemctl enable --now monoprice-amp
-sudo journalctl -u monoprice-amp -f   # watch live logs
 ```
 
----
+## UI overview
 
-## REST API Reference
+- Header with light/dark theme toggle.
+- Source editor modal for renaming the six inputs.
+- One card per zone with emoji icon, editable zone name, power toggle, source selector, volume slider, and status chip.
+- Advanced zone panel with mute, bass, treble, balance, and max-volume controls.
 
-### Amp Control
+The browser keeps only in-memory state during a session. On reload, the app rebuilds itself from `/api/config` and live zone polling rather than from local storage.[2]
 
-| Method | Endpoint | Body | Response |
-|--------|----------|------|----------|
-| `GET` | `/api/health` | — | `{ ok: true, serialOpen: bool }` |
-| `GET` | `/api/state?zone=N` | — | `{ zone, power, source, volume }` |
-| `POST` | `/api/zone/:zone/power` | `{ "on": true }` | `{ ok, zone, power }` |
-| `POST` | `/api/zone/:zone/source` | `{ "source": 1–6 }` | `{ ok, zone, source }` |
-| `POST` | `/api/zone/:zone/volume` | `{ "volume": 0–38 }` | `{ ok, zone, volume }` |
+## Notes and limits
 
-### Configuration
-
-| Method | Endpoint | Body | Response |
-|--------|----------|------|----------|
-| `GET` | `/api/config` | — | Full config JSON |
-| `PATCH` | `/api/config` | Partial config object | Updated full config |
-
-**`PATCH` examples:**
-
-```bash
-# Change theme
-curl -X PATCH http://pi:3000/api/config   -H "Content-Type: application/json"   -d '{"theme":"light"}'
-
-# Rename zone 2
-curl -X PATCH http://pi:3000/api/config   -H "Content-Type: application/json"   -d '{"zones":{"2":{"name":"Dining Room"}}}'
-
-# Rename source 3
-curl -X PATCH http://pi:3000/api/config   -H "Content-Type: application/json"   -d '{"sourceNames":{"3":"Apple TV"}}'
-```
-
----
-
-## Configuration File (`config.json`)
-
-Auto-created on first run with these defaults:
-
-```json
-{
-  "theme": "dark",
-  "sourceNames": {
-    "1": "Source 1", "2": "Source 2", "3": "Source 3",
-    "4": "Source 4", "5": "Source 5", "6": "Source 6"
-  },
-  "zones": {
-    "1": { "name": "Living Room", "icon": "🛋️" },
-    "2": { "name": "Kitchen",     "icon": "🍳" },
-    "3": { "name": "Master Bed",  "icon": "🛏️" },
-    "4": { "name": "Office",      "icon": "💻" },
-    "5": { "name": "Patio",       "icon": "🌿" },
-    "6": { "name": "Garage",      "icon": "🏠" }
-  }
-}
-```
-
-All changes made through the UI are written back atomically (write to `.tmp` → rename).
-
----
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `3000` | HTTP server port |
-| `SERIAL_PATH` | `/dev/ttyUSB0` | Serial device path |
-| `CONFIG_PATH` | `./config.json` | Path to the UI config file |
-
----
-
-## RS-232 Protocol Notes
-
-These behaviors were validated against real hardware. The implementation strictly follows them.
-
-| Detail | Value |
-|--------|-------|
-| Baud rate | 9600 |
-| Frame | 8-N-1 |
-| Command terminator | `\r\n` (CR+LF, 0x0D 0x0A) — `\r` alone or `\n` alone cause "Command Error." |
-| Zone prefix | Controller ID (`1`) + zone digit (`1`–`6`) → `11`–`16` |
-| Query response | `>` + 22 ASCII digits; may arrive in chunks (200 ms settle timer used) |
-| Set command response | **None** — power/source/volume commands produce no response; drain only |
-
-> ⚠️ Some Monoprice firmware manuals document a two-digit zone format (`11`–`16` without the
-> controller prefix). **This format causes "Command Error." on this unit.** The correct format
-> is always `1<zone-digit>`, e.g. zone 4 → `14`.
-
-### Command Reference
-
-| Action | Command | Example (zone 1) |
-|--------|---------|-----------------|
-| Query state | `?1<Z>\r\n` | `?11\r\n` |
-| Power on | `<1<Z>PR01\r\n` | `<11PR01\r\n` |
-| Power off | `<1<Z>PR00\r\n` | `<11PR00\r\n` |
-| Set source | `<1<Z>CH0N\r\n` | `<11CH02\r\n` |
-| Set volume | `<1<Z>VO##\r\n` | `<11VO15\r\n` |
-
----
-
-## Troubleshooting
-
-| Symptom | Fix |
-|---------|-----|
-| ⚠️ Offline banner at top | Check `SERIAL_PATH`; confirm `dialout` group membership (re-login required) |
-| "Command Error." in logs | Verify straight-through DB9 cable; confirm zone range is 1–6 |
-| Zone query times out | Check baud is 9600; confirm amp is powered on; reseat USB adapter |
-| Can't reach `:3000` from LAN | `sudo ufw allow 3000` |
-| `config.json` not saving | Check write permissions: `ls -la /opt/monoprice-amp/` |
-| Service won't start | Confirm `User=` in unit file matches your Pi username; check `which node` path |
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Runtime | Node.js 20 LTS |
-| HTTP server | Express 4.18 |
-| Serial communication | serialport 12 (raw Buffer mode, no parser) |
-| Frontend | Vanilla JS + CSS custom properties (no frameworks, no build step) |
-| Config persistence | JSON flat file with atomic writes |
-| Process management | systemd |
-
----
+- The app assumes the amplifier is reachable at the configured serial device path.
+- Set commands do not return a normal status payload, so the backend resolves them after `serial.drain()` instead of waiting for a reply.[1]
+- Advanced tone and balance ranges are implemented with safe clamped integer values in the controller; if a specific hardware unit uses different accepted ranges, those clamp values can be adjusted in `server.js`.[1][2]
+- Zone 6 is a good candidate for a lower max-volume cap when it drives outdoor speakers.[1]
 
 ## License
 
-MIT — free to use, modify, and self-host.
+MIT

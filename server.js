@@ -1,372 +1,690 @@
-"use strict";
+#!/usr/bin/env node
+/**
+ * Monoprice 10761 Web Controller
+ *
+ * Backend: Node.js + Express
+ * - Controls the Monoprice 10761 6-zone whole-home audio amplifier over RS-232.
+ * - Exposes a REST API for zone power, source, volume, tone, balance, and mute.
+ * - Maintains a server-side JSON config for UI theme, source names, and zone metadata.
+ *
+ * IMPORTANT: RS-232 protocol details (validated against real hardware):
+ * - 9600 baud, 8-N-1, straight-through DB9, CR+LF terminator.
+ * - Zone prefix is "1<Z>" where 1 is controller ID and Z is single-digit zone (1–6).
+ *   Example: Zone 1 prefix "11", Zone 6 prefix "16".
+ * - Commands:
+ *   Query:  ?1<Z>\r\n       (e.g. ?11\r\n)
+ *   Power:  <1<Z>PR01\r\n   (on)  / <1<Z>PR00\r\n (off)
+ *   Source: <1<Z>CH0N\r\n   (01–06)
+ *   Volume: <1<Z>VO##\r\n   (00–38)
+ *   Treble: <1<Z>TR##\r\n   (tone control)
+ *   Bass:   <1<Z>BS##\r\n   (tone control)
+ *   Balance:<1<Z>BL##\r\n   (left/right balance)
+ *   Mute:   <1<Z>MU01\r\n   (mute on) / <1<Z>MU00\r\n (mute off)
+ *
+ * Query responses:
+ * - Amp echoes sent bytes, then sends '#' and a line beginning with '>'.
+ * - Response: ">" + 22 ASCII digits (11 × 2-digit fields).
+ *   Fields (2 chars each after '>'):
+ *     0: ZZ zone echo
+ *     1: PA public address (not used here)
+ *     2: PR power (0/1)
+ *     3: MU mute (0/1)
+ *     4: DT do not disturb
+ *     5: VO volume (00–38)
+ *     6: TR treble
+ *     7: BS bass
+ *     8: BL balance
+ *     9: CH source (01–06)
+ *    10: LS keypad flag
+ *
+ * Set commands:
+ * - Do NOT produce a status response; they just echo bytes.
+ * - We only wait for the serial port to drain, then resolve.
+ */
 
-const express = require("express");
-const fs = require("fs");
-const path = require("path");
-const { SerialPort } = require("serialport");
+const fs = require('fs');
+const path = require('path');
+const express = require('express');
+const { SerialPort } = require('serialport');
 
-const PORT = parseInt(process.env.PORT || "3000", 10);
-const SERIAL_PATH = process.env.SERIAL_PATH || "/dev/ttyUSB0";
-const CONFIG_PATH = process.env.CONFIG_PATH || path.join(__dirname, "config.json");
-const DEBUG_SERIAL = process.env.DEBUG_SERIAL === "1";
-const SERIAL_OPEN_TIMEOUT_MS = parseInt(process.env.SERIAL_OPEN_TIMEOUT_MS || "5000", 10);
-const RECONCILE_INTERVAL_MS = parseInt(process.env.RECONCILE_INTERVAL_MS || "60000", 10);
+// Environment variables
+const PORT = parseInt(process.env.PORT || '3000', 10);
+const SERIAL_PATH = process.env.SERIAL_PATH || '/dev/ttyUSB0';
+const CONFIG_PATH = process.env.CONFIG_PATH || path.resolve('./config.json');
 
-let serialReadyResolve;
-let serialReadyReject;
-let serialOpenTimedOut = false;
-const serialReady = new Promise((resolve, reject) => {
-  serialReadyResolve = resolve;
-  serialReadyReject = reject;
-});
+// Serial terminator CR+LF: two bytes 0x0D 0x0A
+const TERMINATOR = Buffer.from([0x0D, 0x0A]);
 
-const serialOpenTimeout = setTimeout(() => {
-  serialOpenTimedOut = true;
-  serialReadyReject(new Error(`Serial port did not open within ${SERIAL_OPEN_TIMEOUT_MS} ms`));
-}, SERIAL_OPEN_TIMEOUT_MS);
+// Express app
+const app = express();
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-const CONFIG_DEFAULTS = {
-  theme: "dark",
+// --- Config store -----------------------------------------------------------
+
+const DEFAULT_CONFIG = {
+  theme: 'dark',
   sourceNames: {
-    "1": "Source 1", "2": "Source 2", "3": "Source 3",
-    "4": "Source 4", "5": "Source 5", "6": "Source 6"
+    '1': 'Source 1',
+    '2': 'Source 2',
+    '3': 'Source 3',
+    '4': 'Source 4',
+    '5': 'Source 5',
+    '6': 'Source 6'
   },
   zones: {
-    "1": { name: "Living Room", icon: "🛋️" },
-    "2": { name: "Kitchen", icon: "🍳" },
-    "3": { name: "Master Bed", icon: "🛏️" },
-    "4": { name: "Office", icon: "💻" },
-    "5": { name: "Patio", icon: "🌿" },
-    "6": { name: "Garage", icon: "🏠" }
-  },
-  automation: {
-    enabled: true,
-    defaultIdleMinutes: 120,
-    zones: {
-      "1": { enabled: false, idleMinutes: 120 },
-      "2": { enabled: false, idleMinutes: 120 },
-      "3": { enabled: false, idleMinutes: 120 },
-      "4": { enabled: false, idleMinutes: 120 },
-      "5": { enabled: false, idleMinutes: 120 },
-      "6": { enabled: true, idleMinutes: 120 }
-    }
+    '1': { name: 'Living Room', icon: '🛋️', maxVolume: 38 },
+    '2': { name: 'Kitchen', icon: '🍳', maxVolume: 38 },
+    '3': { name: 'Master Bed', icon: '🛏️', maxVolume: 38 },
+    '4': { name: 'Office', icon: '💻', maxVolume: 38 },
+    '5': { name: 'Patio', icon: '🌿', maxVolume: 38 },
+    '6': { name: 'Garage', icon: '🏠', maxVolume: 30 } // example safer cap outdoors
   }
 };
 
-let cfg = {};
-const zoneStateCache = {};
+let config = loadConfig();
 
-function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
-function deepMerge(dst, src) {
-  for (const key of Object.keys(src)) {
-    if (src[key] && typeof src[key] === "object" && !Array.isArray(src[key]) && dst[key] && typeof dst[key] === "object" && !Array.isArray(dst[key])) deepMerge(dst[key], src[key]);
-    else dst[key] = src[key];
-  }
-  return dst;
-}
-function clampVolume(v) { return Math.max(0, Math.min(38, parseInt(v, 10) || 0)); }
-function clampIdleMinutes(v) { return Math.max(5, Math.min(720, parseInt(v, 10) || 120)); }
-function validZone(zone) { return Number.isInteger(zone) && zone >= 1 && zone <= 6; }
-function validSource(source) { return Number.isInteger(source) && source >= 1 && source <= 6; }
-
-function ensureAutomationDefaults(config) {
-  if (!config.automation || typeof config.automation !== "object") config.automation = deepClone(CONFIG_DEFAULTS.automation);
-  if (typeof config.automation.enabled !== "boolean") config.automation.enabled = true;
-  const d = parseInt(config.automation.defaultIdleMinutes, 10);
-  config.automation.defaultIdleMinutes = Number.isFinite(d) ? clampIdleMinutes(d) : 120;
-  if (!config.automation.zones || typeof config.automation.zones !== "object") config.automation.zones = {};
-  for (let z = 1; z <= 6; z++) {
-    const key = String(z);
-    const existing = config.automation.zones[key] || {};
-    const fallback = CONFIG_DEFAULTS.automation.zones[key];
-    config.automation.zones[key] = {
-      enabled: typeof existing.enabled === "boolean" ? existing.enabled : fallback.enabled,
-      idleMinutes: clampIdleMinutes(parseInt(existing.idleMinutes, 10) || fallback.idleMinutes)
-    };
-  }
-  return config;
-}
-
+/**
+ * Load config from disk or create with defaults.
+ */
 function loadConfig() {
-  if (!fs.existsSync(CONFIG_PATH)) {
-    cfg = deepClone(CONFIG_DEFAULTS);
-    writeConfig();
-    return;
-  }
   try {
-    const raw = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
-    cfg = deepMerge(deepClone(CONFIG_DEFAULTS), raw);
-    ensureAutomationDefaults(cfg);
+    if (fs.existsSync(CONFIG_PATH)) {
+      const raw = fs.readFileSync(CONFIG_PATH, 'utf8');
+      const parsed = JSON.parse(raw);
+      return deepMerge(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), parsed);
+    }
   } catch (err) {
-    console.error("[config] Failed to read config, using defaults:", err.message);
-    cfg = deepClone(CONFIG_DEFAULTS);
+    console.error('Failed to read config.json, using defaults:', err);
   }
+  // Create file with defaults on first run
+  try {
+    writeConfig(DEFAULT_CONFIG);
+  } catch (err) {
+    console.error('Failed to write default config.json:', err);
+  }
+  return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
 }
 
-function writeConfig() {
-  const tmp = CONFIG_PATH + ".tmp";
-  fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), "utf8");
-  fs.renameSync(tmp, CONFIG_PATH);
+/**
+ * Atomic write: write to tmp file then rename.
+ */
+function writeConfig(cfg) {
+  const tmpPath = CONFIG_PATH + '.tmp';
+  fs.writeFileSync(tmpPath, JSON.stringify(cfg, null, 2), 'utf8');
+  fs.renameSync(tmpPath, CONFIG_PATH);
 }
 
-const serial = new SerialPort({ path: SERIAL_PATH, baudRate: 9600, dataBits: 8, stopBits: 1, parity: "none", autoOpen: false });
-serial.open(err => {
-  if (err) {
-    clearTimeout(serialOpenTimeout);
-    console.error(`[serial] Failed to open ${SERIAL_PATH}: ${err.message}`);
-    serialReadyReject(err);
-  } else {
-    clearTimeout(serialOpenTimeout);
-    console.log(`[serial] Opened ${SERIAL_PATH} @ 9600 8-N-1`);
-    serialReadyResolve();
+/**
+ * Deep merge src into target (mutates target).
+ * Used for PATCH /api/config.
+ */
+function deepMerge(target, src) {
+  if (typeof src !== 'object' || src === null) return target;
+  for (const key of Object.keys(src)) {
+    const val = src[key];
+    if (Array.isArray(val)) {
+      target[key] = val.slice();
+    } else if (typeof val === 'object' && val !== null) {
+      if (typeof target[key] !== 'object' || target[key] === null) {
+        target[key] = {};
+      }
+      deepMerge(target[key], val);
+    } else {
+      target[key] = val;
+    }
   }
+  return target;
+}
+
+// --- Serial port and helpers ------------------------------------------------
+
+/**
+ * SerialPort instance.
+ * Note: we use raw Buffer mode with a 'data' listener directly.
+ */
+const serial = new SerialPort({
+  path: SERIAL_PATH,
+  baudRate: 9600,
+  dataBits: 8,
+  stopBits: 1,
+  parity: 'none',
+  autoOpen: true
 });
 
-function isSerialUnavailableError(err) {
-  return err && (serialOpenTimedOut || /did not open within/i.test(err.message) || /Serial port not open/i.test(err.message));
-}
-async function waitForSerialReady() {
-  return serialReady;
-}
+serial.on('error', (err) => {
+  console.error('Serial error:', err);
+});
 
+// Promise chain to serialize all RS-232 transactions.
 let serialQueue = Promise.resolve();
-function enqueue(fn) {
-  serialQueue = serialQueue.then(fn).catch(err => { console.error("[serial] Queue error:", err.message); throw err; });
+
+/**
+ * Enqueue a function that returns a promise, ensuring serialised access.
+ */
+function enqueueSerial(fn) {
+  serialQueue = serialQueue.then(() => fn()).catch((err) => {
+    console.error('Serial queue error:', err);
+  });
   return serialQueue;
 }
 
-const TERMINATOR = Buffer.from([0x0D, 0x0A]);
-function hexDump(buf) { return [...buf].map(b => b.toString(16).padStart(2, "0")).join(" "); }
-
+/**
+ * Write a command string (without terminator) as bytes plus CR+LF,
+ * then wait for the port to drain. Used for set commands (PR/CH/VO/TR/BS/BL/MU).
+ */
 function writeCommand(cmd) {
-  return enqueue(async () => {
-    await waitForSerialReady();
+  return enqueueSerial(() => {
     return new Promise((resolve, reject) => {
-      if (!serial.isOpen) return reject(new Error("Serial port not open"));
-      const buf = Buffer.concat([Buffer.from(cmd, "ascii"), TERMINATOR]);
-      if (DEBUG_SERIAL) console.log(`[serial] TX ${JSON.stringify(cmd)} [${hexDump(buf)}]`);
-      serial.write(buf, err => {
-        if (err) return reject(err);
-        serial.drain(drainErr => {
-          if (drainErr) return reject(drainErr);
-          serial.flush(flushErr => {
-            if (flushErr) console.warn("[serial] post-write flush warning:", flushErr.message);
+      try {
+        const buf = Buffer.from(cmd, 'ascii');
+        const payload = Buffer.concat([buf, TERMINATOR]);
+        serial.write(payload, (writeErr) => {
+          if (writeErr) {
+            return reject(writeErr);
+          }
+          serial.drain((drainErr) => {
+            if (drainErr) {
+              return reject(drainErr);
+            }
             resolve();
           });
         });
-      });
-    });
-  });
-}
-
-function queryCommand(cmd) {
-  return enqueue(async () => {
-    await waitForSerialReady();
-    return new Promise((resolve, reject) => {
-      if (!serial.isOpen) return reject(new Error("Serial port not open"));
-      const SETTLE_MS = 200;
-      const TIMEOUT_MS = 3000;
-      let rxBuf = "";
-      let settleTimer = null;
-      function cleanup() { clearTimeout(timeout); if (settleTimer) clearTimeout(settleTimer); serial.removeAllListeners("data"); }
-      const onData = chunk => {
-        rxBuf += chunk.toString("ascii");
-        if (DEBUG_SERIAL) {
-          console.log(`[serial] RX hex ${hexDump(chunk)}`);
-          console.log(`[serial] RX buf ${JSON.stringify(rxBuf)}`);
-        }
-        const idx = rxBuf.indexOf(">");
-        if (idx !== -1) {
-          if (settleTimer) clearTimeout(settleTimer);
-          settleTimer = setTimeout(() => { const response = rxBuf.substring(idx); cleanup(); resolve(response); }, SETTLE_MS);
-        }
-      };
-      const timeout = setTimeout(() => { console.error(`[serial] TIMEOUT cmd=${JSON.stringify(cmd)} rxBuf=${JSON.stringify(rxBuf)}`); cleanup(); reject(new Error(`Query ${JSON.stringify(cmd)} timed out after ${TIMEOUT_MS} ms`)); }, TIMEOUT_MS);
-      serial.flush(flushErr => {
-        if (flushErr) console.warn("[serial] pre-query flush warning:", flushErr.message);
-        serial.on("data", onData);
-        const txBuf = Buffer.concat([Buffer.from(cmd, "ascii"), TERMINATOR]);
-        if (DEBUG_SERIAL) console.log(`[serial] TX ${JSON.stringify(cmd)} [${hexDump(txBuf)}]`);
-        serial.write(txBuf, writeErr => { if (writeErr) { cleanup(); reject(writeErr); } });
-      });
-    });
-  });
-}
-
-function parseZoneStatus(raw, zone) {
-  const start = raw.indexOf(">");
-  if (start === -1) throw new Error(`No '>' in response: ${JSON.stringify(raw)}`);
-  const digits = raw.substring(start + 1).replace(/\D/g, "");
-  if (digits.length < 22) throw new Error(`Response too short (${digits.length}/22): ${JSON.stringify(raw)}`);
-  const field = idx => parseInt(digits.substring(idx * 2, idx * 2 + 2), 10);
-  return { zone, power: field(2) === 1, source: field(9), volume: field(5) };
-}
-
-function zonePrefix(zone) { return `1${zone}`; }
-async function getZoneState(zone) { const raw = await queryCommand(`?1${zone}`); const state = parseZoneStatus(raw, zone); zoneStateCache[zone] = state; return state; }
-async function setZonePower(zone, on) { await writeCommand(`<${zonePrefix(zone)}PR${on ? "01" : "00"}`); zoneStateCache[zone] = { ...(zoneStateCache[zone] || {}), zone, power: on }; return { ok: true, zone, power: on }; }
-async function setZoneSource(zone, src) { await writeCommand(`<${zonePrefix(zone)}CH${String(src).padStart(2, "0")}`); zoneStateCache[zone] = { ...(zoneStateCache[zone] || {}), zone, source: src }; return { ok: true, zone, source: src }; }
-async function setZoneVolume(zone, vol) { const v = clampVolume(vol); await writeCommand(`<${zonePrefix(zone)}VO${String(v).padStart(2, "0")}`); zoneStateCache[zone] = { ...(zoneStateCache[zone] || {}), zone, volume: v }; return { ok: true, zone, volume: v }; }
-
-const autoOffState = { lastActivity: {}, timers: {} };
-function getZoneAutomation(zone) {
-  const a = cfg.automation || {};
-  const z = (a.zones || {})[String(zone)] || {};
-  return { enabled: !!(a.enabled && z.enabled), idleMinutes: clampIdleMinutes(z.idleMinutes || a.defaultIdleMinutes || 120) };
-}
-function clearAutoOff(zone) { if (autoOffState.timers[zone]) { clearTimeout(autoOffState.timers[zone]); delete autoOffState.timers[zone]; } }
-function cancelZoneAutomation(zone, reason) { clearAutoOff(zone); delete autoOffState.lastActivity[zone]; if (reason !== "startup-off") console.log(`[autooff] zone ${zone} timer cleared: ${reason}`); }
-function getAutoOffRemainingMs(zone) { const rule = getZoneAutomation(zone); const last = autoOffState.lastActivity[zone]; if (!rule.enabled || !last) return null; return Math.max(0, last + rule.idleMinutes * 60 * 1000 - Date.now()); }
-function getAutomationStatus(zone) { const rule = getZoneAutomation(zone); return { enabled: rule.enabled, idleMinutes: rule.idleMinutes, remainingMs: rule.enabled ? getAutoOffRemainingMs(zone) : null }; }
-function scheduleAutoOff(zone, reason) {
-  clearAutoOff(zone);
-  const rule = getZoneAutomation(zone);
-  if (!rule.enabled) return;
-  autoOffState.timers[zone] = setTimeout(async () => {
-    try {
-      const state = await getZoneState(zone);
-      if (state.power) {
-        await setZonePower(zone, false);
-        cancelZoneAutomation(zone, "expired");
-        console.log(`[autooff] zone ${zone} powered off after ${rule.idleMinutes} min idle`);
-      }
-    } catch (err) {
-      console.error(`[autooff] zone ${zone} failed: ${err.message}`);
-      scheduleAutoOff(zone, "retry-after-error");
-    }
-  }, rule.idleMinutes * 60 * 1000);
-  console.log(`[autooff] zone ${zone} timer set for ${rule.idleMinutes} min (${reason})`);
-}
-function markZoneActivity(zone, reason) { autoOffState.lastActivity[zone] = Date.now(); console.log(`[autooff] zone ${zone} activity: ${reason}`); scheduleAutoOff(zone, reason); }
-
-async function reconcileZoneState(zone) {
-  const state = await getZoneState(zone);
-  const prev = zoneStateCache[zone] || {};
-  zoneStateCache[zone] = state;
-  const changed = prev.power !== state.power || prev.source !== state.source || prev.volume !== state.volume;
-  if (!changed) return;
-  console.log(`[reconcile] zone ${zone} changed externally: ${JSON.stringify(prev)} -> ${JSON.stringify(state)}`);
-  if (state.power) markZoneActivity(zone, "reconcile-sync");
-  else cancelZoneAutomation(zone, "reconcile-off");
-}
-
-async function bootstrapAutoOffFromAmp() {
-  await waitForSerialReady();
-  for (let i = 0; i < 6; i++) {
-    const zone = i + 1;
-    setTimeout(async () => {
-      try {
-        const state = await getZoneState(zone);
-        if (state.power) markZoneActivity(zone, "startup-sync");
-        else cancelZoneAutomation(zone, "startup-off");
       } catch (err) {
-        console.warn(`[autooff] startup sync zone ${zone} skipped: ${err.message}`);
+        reject(err);
       }
-    }, i * 250);
-  }
+    });
+  });
 }
 
-function startReconciliationLoop() {
-  setInterval(async () => {
-    if (!serial.isOpen) return;
-    for (let i = 0; i < 6; i++) {
-      const zone = i + 1;
-      setTimeout(() => {
-        reconcileZoneState(zone).catch(err => console.warn(`[reconcile] zone ${zone} skipped: ${err.message}`));
-      }, i * 250);
+/**
+ * Send a query command (e.g. "?11") and resolve with the status line
+ * starting at '>' once it arrives.
+ *
+ * Algorithm:
+ * - Attach a data listener to accumulate chunks into a buffer string.
+ * - Once we see '>', start a 200ms settle timer to allow remaining bytes.
+ * - On timer fire, extract substring from '>' and resolve.
+ */
+function queryCommand(cmd) {
+  return enqueueSerial(() => {
+    return new Promise((resolve, reject) => {
+      let buffer = '';
+      let settleTimer = null;
+      let resolved = false;
+
+      function cleanup() {
+        serial.off('data', onData);
+        if (settleTimer) {
+          clearTimeout(settleTimer);
+          settleTimer = null;
+        }
+      }
+
+      function onData(chunk) {
+        // Append ASCII data
+        buffer += chunk.toString('ascii');
+        const idx = buffer.indexOf('>');
+        if (idx !== -1 && !settleTimer) {
+          // Start settle timer once '>' is detected
+          settleTimer = setTimeout(() => {
+            if (resolved) return;
+            resolved = true;
+            cleanup();
+            // Extract from '>' onwards
+            const response = buffer.slice(idx);
+            resolve(response);
+          }, 200); // 200ms settle
+        }
+      }
+
+      serial.on('data', onData);
+
+      try {
+        const buf = Buffer.from(cmd, 'ascii');
+        const payload = Buffer.concat([buf, TERMINATOR]);
+        serial.write(payload, (writeErr) => {
+          if (writeErr) {
+            cleanup();
+            return reject(writeErr);
+          }
+          // For query we do not wait for drain response to parse; data listener handles arrival.
+          serial.drain((drainErr) => {
+            if (drainErr && !resolved) {
+              cleanup();
+              return reject(drainErr);
+            }
+          });
+        });
+      } catch (err) {
+        cleanup();
+        reject(err);
+      }
+    });
+  });
+}
+
+/**
+ * Build the "1Z" prefix for a zone.
+ * Controller ID is 1, zone is single digit 1–6.
+ * We do NOT use the two-digit zone format documented in some manuals,
+ * because this hardware expects the "1<Z>" format (e.g. 11, 12, ..., 16).
+ */
+function zonePrefix(zone) {
+  return `1${zone}`;
+}
+
+/**
+ * Parse the zone status line (starting with '>') into an object:
+ * { zone, power, source, volume, mute, treble, bass, balance }
+ *
+ * raw example: ">1100000000111111100401"
+ */
+function parseZoneStatus(raw, zone) {
+  if (!raw || raw[0] !== '>') {
+    throw new Error('Invalid status line: ' + raw);
+  }
+
+  // Strip everything that isn't a digit after '>'
+  const digits = raw
+    .slice(1)
+    .replace(/[^\d]/g, '');
+
+  if (digits.length < 22) {
+    throw new Error('Status line too short: ' + digits);
+  }
+
+  const fields = [];
+  for (let i = 0; i < 11; i++) {
+    fields.push(digits.slice(i * 2, i * 2 + 2));
+  }
+
+  const zoneEcho = parseInt(fields[0], 10);
+  const power = fields[2] === '01';
+  const mute = fields[3] === '01';
+  const volume = parseInt(fields[5], 10);
+  const treble = parseInt(fields[6], 10);
+  const bass = parseInt(fields[7], 10);
+  const balance = parseInt(fields[8], 10);
+  const source = parseInt(fields[9], 10);
+
+  return {
+    zone,
+    zoneEcho,
+    power,
+    mute,
+    volume,
+    treble,
+    bass,
+    balance,
+    source
+  };
+}
+
+// --- High-level amp helpers -------------------------------------------------
+
+function validateZone(zone) {
+  const z = Number(zone);
+  if (!Number.isInteger(z) || z < 1 || z > 6) {
+    const err = new Error('zone must be 1-6');
+    err.statusCode = 400;
+    throw err;
+  }
+  return z;
+}
+
+function validateSource(src) {
+  const s = Number(src);
+  if (!Number.isInteger(s) || s < 1 || s > 6) {
+    const err = new Error('source must be 1-6');
+    err.statusCode = 400;
+    throw err;
+  }
+  return s;
+}
+
+function clampVolume(zone, vol) {
+  let v = Number(vol);
+  if (!Number.isFinite(v)) v = 0;
+  if (v < 0) v = 0;
+  if (v > 38) v = 38;
+  // Apply per-zone maxVolume cap from config if present
+  const zoneCfg = config.zones[String(zone)];
+  if (zoneCfg && typeof zoneCfg.maxVolume === 'number') {
+    if (v > zoneCfg.maxVolume) {
+      v = zoneCfg.maxVolume;
     }
-  }, RECONCILE_INTERVAL_MS);
+  }
+  return v;
 }
 
-const app = express();
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
-const VALID_CONFIG_KEYS = new Set(["theme", "sourceNames", "zones", "automation"]);
-function validateZoneParam(req, res, next) { const zone = parseInt(req.params.zone, 10); if (!validZone(zone)) return res.status(400).json({ error: "zone must be 1-6" }); req.zone = zone; next(); }
+// Tone/balance ranges: the Monoprice/Xantech-style amps use integer steps
+// for treble, bass, and balance. We clamp to a safe 0–14 range by default.
+// Adjust if you know the exact range for your hardware.
+function clampTone(value) {
+  let v = Number(value);
+  if (!Number.isFinite(v)) v = 0;
+  if (v < 0) v = 0;
+  if (v > 14) v = 14;
+  return v;
+}
 
-app.get("/api/health", (req, res) => {
-  res.json({ ok: true, serialOpen: serial.isOpen, serialOpenTimedOut });
+// Balance: treat as 0–20 where 10 is center by default.
+// This matches common multi-zone amp balance ranges (left/right steps).
+function clampBalance(value) {
+  let v = Number(value);
+  if (!Number.isFinite(v)) v = 10;
+  if (v < 0) v = 0;
+  if (v > 20) v = 20;
+  return v;
+}
+
+/**
+ * Query a zone's state.
+ */
+async function getZoneState(zone) {
+  const z = validateZone(zone);
+  const prefix = zonePrefix(z);
+  const cmd = `?${prefix}`;
+  const raw = await queryCommand(cmd);
+  return parseZoneStatus(raw, z);
+}
+
+async function setZonePower(zone, on) {
+  const z = validateZone(zone);
+  const prefix = zonePrefix(z);
+  const cmd = `<${prefix}PR${on ? '01' : '00'}`;
+  await writeCommand(cmd);
+  return { zone: z, power: !!on };
+}
+
+async function setZoneSource(zone, src) {
+  const z = validateZone(zone);
+  const s = validateSource(src);
+  const prefix = zonePrefix(z);
+  const srcStr = String(s).padStart(2, '0');
+  const cmd = `<${prefix}CH${srcStr}`;
+  await writeCommand(cmd);
+  return { zone: z, source: s };
+}
+
+async function setZoneVolume(zone, vol) {
+  const z = validateZone(zone);
+  const v = clampVolume(z, vol);
+  const prefix = zonePrefix(z);
+  const volStr = String(v).padStart(2, '0');
+  const cmd = `<${prefix}VO${volStr}`;
+  await writeCommand(cmd);
+  return { zone: z, volume: v };
+}
+
+async function setZoneMute(zone, mute) {
+  const z = validateZone(zone);
+  const prefix = zonePrefix(z);
+  const cmd = `<${prefix}MU${mute ? '01' : '00'}`;
+  await writeCommand(cmd);
+  return { zone: z, mute: !!mute };
+}
+
+async function setZoneTreble(zone, treble) {
+  const z = validateZone(zone);
+  const t = clampTone(treble);
+  const prefix = zonePrefix(z);
+  const tStr = String(t).padStart(2, '0');
+  const cmd = `<${prefix}TR${tStr}`;
+  await writeCommand(cmd);
+  return { zone: z, treble: t };
+}
+
+async function setZoneBass(zone, bass) {
+  const z = validateZone(zone);
+  const b = clampTone(bass);
+  const prefix = zonePrefix(z);
+  const bStr = String(b).padStart(2, '0');
+  const cmd = `<${prefix}BS${bStr}`;
+  await writeCommand(cmd);
+  return { zone: z, bass: b };
+}
+
+async function setZoneBalance(zone, balance) {
+  const z = validateZone(zone);
+  const b = clampBalance(balance);
+  const prefix = zonePrefix(z);
+  const bStr = String(b).padStart(2, '0');
+  const cmd = `<${prefix}BL${bStr}`;
+  await writeCommand(cmd);
+  return { zone: z, balance: b };
+}
+
+// --- API endpoints ----------------------------------------------------------
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true });
 });
 
-app.get("/api/state", async (req, res) => {
-  const zone = parseInt(req.query.zone, 10);
-  if (!validZone(zone)) return res.status(400).json({ error: "zone must be 1-6" });
+// Zone state: GET /api/state?zone=N
+app.get('/api/state', async (req, res) => {
   try {
+    const zone = req.query.zone;
+    if (zone === undefined) {
+      return res.status(400).json({ error: 'zone must be 1-6' });
+    }
     const state = await getZoneState(zone);
-    res.json({ ...state, automation: getAutomationStatus(zone) });
+    res.json({
+      zone: state.zone,
+      power: state.power,
+      source: state.source,
+      volume: state.volume,
+      mute: state.mute,
+      treble: state.treble,
+      bass: state.bass,
+      balance: state.balance
+    });
   } catch (err) {
-    console.error(`[api] getZoneState(${zone}): ${err.message}`);
-    if (isSerialUnavailableError(err)) return res.status(503).json({ error: "Serial adapter not ready" });
-    res.status(502).json({ error: err.message });
+    const status = err.statusCode || 500;
+    res.status(status).json({ error: err.message || 'internal error' });
   }
 });
 
-app.post("/api/zone/:zone/power", validateZoneParam, async (req, res) => {
-  if (typeof req.body.on !== "boolean") return res.status(400).json({ error: '"on" must be a boolean' });
+// Power: POST /api/zone/:zone/power { on: true/false }
+app.post('/api/zone/:zone/power', async (req, res) => {
   try {
-    const result = await setZonePower(req.zone, req.body.on);
-    if (req.body.on) markZoneActivity(req.zone, "power-on"); else cancelZoneAutomation(req.zone, "power-off");
-    res.json({ ...result, automation: getAutomationStatus(req.zone) });
+    const zone = req.params.zone;
+    const { on } = req.body;
+    if (typeof on !== 'boolean') {
+      return res.status(400).json({ error: 'on must be true or false' });
+    }
+    const result = await setZonePower(zone, on);
+    res.json({ ok: true, zone: result.zone, power: result.power });
   } catch (err) {
-    console.error(`[api] setZonePower(${req.zone}): ${err.message}`);
-    if (isSerialUnavailableError(err)) return res.status(503).json({ error: "Serial adapter not ready" });
-    res.status(502).json({ error: err.message });
+    const status = err.statusCode || 500;
+    res.status(status).json({ error: err.message || 'internal error' });
   }
 });
 
-app.post("/api/zone/:zone/source", validateZoneParam, async (req, res) => {
-  const source = parseInt(req.body.source, 10);
-  if (!validSource(source)) return res.status(400).json({ error: "source must be 1-6" });
+// Source: POST /api/zone/:zone/source { source: 1-6 }
+app.post('/api/zone/:zone/source', async (req, res) => {
   try {
-    const result = await setZoneSource(req.zone, source);
-    markZoneActivity(req.zone, "source-change");
-    res.json({ ...result, automation: getAutomationStatus(req.zone) });
+    const zone = req.params.zone;
+    const { source } = req.body;
+    const result = await setZoneSource(zone, source);
+    res.json({ ok: true, zone: result.zone, source: result.source });
   } catch (err) {
-    console.error(`[api] setZoneSource(${req.zone}): ${err.message}`);
-    if (isSerialUnavailableError(err)) return res.status(503).json({ error: "Serial adapter not ready" });
-    res.status(502).json({ error: err.message });
+    const status = err.statusCode || 500;
+    res.status(status).json({ error: err.message || 'internal error' });
   }
 });
 
-app.post("/api/zone/:zone/volume", validateZoneParam, async (req, res) => {
-  const volume = clampVolume(req.body.volume);
-  const cached = zoneStateCache[req.zone];
-  if (cached && cached.volume === volume) {
-    return res.json({ ok: true, zone: req.zone, volume, skipped: true, automation: getAutomationStatus(req.zone) });
-  }
+// Volume: POST /api/zone/:zone/volume { volume: 0-38 }
+app.post('/api/zone/:zone/volume', async (req, res) => {
   try {
-    const result = await setZoneVolume(req.zone, volume);
-    markZoneActivity(req.zone, "volume-change");
-    res.json({ ...result, skipped: false, automation: getAutomationStatus(req.zone) });
+    const zone = req.params.zone;
+    const { volume } = req.body;
+    const result = await setZoneVolume(zone, volume);
+    res.json({ ok: true, zone: result.zone, volume: result.volume });
   } catch (err) {
-    console.error(`[api] setZoneVolume(${req.zone}): ${err.message}`);
-    if (isSerialUnavailableError(err)) return res.status(503).json({ error: "Serial adapter not ready" });
-    res.status(502).json({ error: err.message });
+    const status = err.statusCode || 500;
+    res.status(status).json({ error: err.message || 'internal error' });
   }
 });
 
-app.get("/api/config", (req, res) => res.json(cfg));
-app.patch("/api/config", (req, res) => {
-  const body = req.body;
-  if (typeof body !== "object" || body === null || Array.isArray(body)) return res.status(400).json({ error: "Request body must be a JSON object" });
-  for (const key of Object.keys(body)) if (!VALID_CONFIG_KEYS.has(key)) return res.status(400).json({ error: `Unknown config key: ${JSON.stringify(key)}` });
-  if (body.automation && typeof body.automation !== "object") return res.status(400).json({ error: "automation must be an object" });
-  deepMerge(cfg, body);
-  ensureAutomationDefaults(cfg);
-  writeConfig();
-  for (let zone = 1; zone <= 6; zone++) {
-    const rule = getZoneAutomation(zone);
-    if (!rule.enabled) clearAutoOff(zone);
-    else if (autoOffState.lastActivity[zone]) scheduleAutoOff(zone, "config-change");
+// Mute: POST /api/zone/:zone/mute { mute: true/false }
+app.post('/api/zone/:zone/mute', async (req, res) => {
+  try {
+    const zone = req.params.zone;
+    const { mute } = req.body;
+    if (typeof mute !== 'boolean') {
+      return res.status(400).json({ error: 'mute must be true or false' });
+    }
+    const result = await setZoneMute(zone, mute);
+    res.json({ ok: true, zone: result.zone, mute: result.mute });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    res.status(status).json({ error: err.message || 'internal error' });
   }
-  res.json(cfg);
 });
 
-loadConfig();
+// Treble: POST /api/zone/:zone/treble { treble: int }
+app.post('/api/zone/:zone/treble', async (req, res) => {
+  try {
+    const zone = req.params.zone;
+    const { treble } = req.body;
+    const result = await setZoneTreble(zone, treble);
+    res.json({ ok: true, zone: result.zone, treble: result.treble });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    res.status(status).json({ error: err.message || 'internal error' });
+  }
+});
+
+// Bass: POST /api/zone/:zone/bass { bass: int }
+app.post('/api/zone/:zone/bass', async (req, res) => {
+  try {
+    const zone = req.params.zone;
+    const { bass } = req.body;
+    const result = await setZoneBass(zone, bass);
+    res.json({ ok: true, zone: result.zone, bass: result.bass });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    res.status(status).json({ error: err.message || 'internal error' });
+  }
+});
+
+// Balance: POST /api/zone/:zone/balance { balance: int }
+app.post('/api/zone/:zone/balance', async (req, res) => {
+  try {
+    const zone = req.params.zone;
+    const { balance } = req.body;
+    const result = await setZoneBalance(zone, balance);
+    res.json({ ok: true, zone: result.zone, balance: result.balance });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    res.status(status).json({ error: err.message || 'internal error' });
+  }
+});
+
+// Config: GET /api/config
+app.get('/api/config', (req, res) => {
+  res.json(config);
+});
+
+// Config: PATCH /api/config (deep merge + validation)
+app.patch('/api/config', (req, res) => {
+  try {
+    const body = req.body;
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return res.status(400).json({ error: 'body must be an object' });
+    }
+
+    // Validate top-level keys
+    const allowedTop = new Set(['theme', 'sourceNames', 'zones']);
+    for (const key of Object.keys(body)) {
+      if (!allowedTop.has(key)) {
+        return res.status(400).json({ error: `unknown top-level key: ${key}` });
+      }
+    }
+
+    // Validate theme if present
+    if (body.theme && typeof body.theme !== 'string') {
+      return res.status(400).json({ error: 'theme must be a string' });
+    }
+
+    // Validate sourceNames if present
+    if (body.sourceNames) {
+      if (typeof body.sourceNames !== 'object' || body.sourceNames === null) {
+        return res.status(400).json({ error: 'sourceNames must be an object' });
+      }
+      for (const [k, v] of Object.entries(body.sourceNames)) {
+        if (!['1', '2', '3', '4', '5', '6'].includes(k)) {
+          return res.status(400).json({ error: `invalid source key: ${k}` });
+        }
+        if (typeof v !== 'string') {
+          return res.status(400).json({ error: `sourceNames["${k}"] must be a string` });
+        }
+      }
+    }
+
+    // Validate zones if present
+    if (body.zones) {
+      if (typeof body.zones !== 'object' || body.zones === null) {
+        return res.status(400).json({ error: 'zones must be an object' });
+      }
+      for (const [zoneKey, zoneVal] of Object.entries(body.zones)) {
+        if (!['1', '2', '3', '4', '5', '6'].includes(zoneKey)) {
+          return res.status(400).json({ error: `zone must be 1-6 (got ${zoneKey})` });
+        }
+        if (typeof zoneVal !== 'object' || zoneVal === null) {
+          return res.status(400).json({ error: `zones["${zoneKey}"] must be an object` });
+        }
+        if (zoneVal.name && typeof zoneVal.name !== 'string') {
+          return res.status(400).json({ error: `zones["${zoneKey}"].name must be a string` });
+        }
+        if (zoneVal.icon && typeof zoneVal.icon !== 'string') {
+          return res.status(400).json({ error: `zones["${zoneKey}"].icon must be a string` });
+        }
+        if (zoneVal.maxVolume !== undefined) {
+          const mv = Number(zoneVal.maxVolume);
+          if (!Number.isFinite(mv) || mv < 0 || mv > 38) {
+            return res.status(400).json({ error: `zones["${zoneKey}"].maxVolume must be 0-38` });
+          }
+        }
+      }
+    }
+
+    // Merge into current config and persist
+    config = deepMerge(config, body);
+    writeConfig(config);
+    res.json(config);
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'internal error' });
+  }
+});
+
+// --- systemd unit example ---------------------------------------------------
+/**
+[Unit]
+Description=Monoprice 10761 Web Controller
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/monoprice-amp
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=SERIAL_PATH=/dev/ttyUSB0
+Environment=CONFIG_PATH=/opt/monoprice-amp/config.json
+ExecStart=/usr/bin/node /opt/monoprice-amp/server.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+ */
+
+// --- Start server -----------------------------------------------------------
+
 app.listen(PORT, () => {
-  console.log(`[server] Listening on http://0.0.0.0:${PORT}`);
-  console.log(`[server] Serial: ${SERIAL_PATH}`);
-  console.log(`[server] Config: ${CONFIG_PATH}`);
-  bootstrapAutoOffFromAmp().catch(err => console.warn(`[autooff] bootstrap skipped: ${err.message}`));
-  startReconciliationLoop();
+  console.log(`Monoprice 10761 controller listening on port ${PORT}`);
 });
