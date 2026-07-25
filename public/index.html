@@ -17,7 +17,6 @@
     --purple-soft:#a78bfa;
     --purple-strong:#6d28d9;
     --purple-glow:rgba(139,92,246,0.35);
-    --success:#38c793;
     --warn-bg:#3a2e17;
     --warn-border:#8a6a25;
     --warn-text:#f0c78a;
@@ -64,8 +63,9 @@
 
   .topbar{display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-5) var(--space-4);}
   .topbar-title{font-size:0.78rem;font-weight:700;letter-spacing:0.14em;color:var(--text-muted);text-transform:uppercase;}
-  .back-btn,.icon-btn{width:2.4rem;height:2.4rem;display:grid;place-items:center;border-radius:var(--radius-full);color:var(--text);flex:0 0 auto;}
+  .back-btn,.icon-btn{width:2.4rem;height:2.4rem;display:grid;place-items:center;border-radius:var(--radius-full);color:var(--text);flex:0 0 auto;line-height:0;}
   .icon-btn{color:var(--text-muted);}
+  .icon-btn svg,.back-btn svg{width:1.2rem;height:1.2rem;display:block;stroke:currentColor;fill:none;}
   .icon-btn:active,.back-btn:active{background:var(--bg-elev-2);}
 
   .banner{margin:0 var(--space-5) var(--space-3);padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);font-size:0.85rem;display:none;}
@@ -107,11 +107,10 @@
     line-height:0;
   }
   .power-btn svg,.chart-btn svg{width:1.15rem;height:1.15rem;display:block;stroke:currentColor;fill:none;}
-  .icon-btn svg,.back-btn svg{width:1.2rem;height:1.2rem;display:block;stroke:currentColor;fill:none;}
-  .icon-btn,.back-btn{line-height:0;}
   .zone-row.is-on .power-btn,.zone-row.is-on .chart-btn{background:rgba(0,0,0,0.22);color:#fff;}
   .power-btn.on{color:var(--purple-soft);}
   .zone-row.is-on .power-btn.on{color:#fff;}
+  .chart-btn{color:var(--text-faint);}
 
   .allbar{padding:var(--space-4) var(--space-5) 0;display:flex;justify-content:flex-end;}
   .all-off-btn{background:var(--bg-elev);border:1px solid var(--border);color:var(--text-muted);padding:0.55rem 1rem;border-radius:var(--radius-md);font-size:0.8rem;font-weight:700;letter-spacing:0.04em;}
@@ -179,8 +178,10 @@
   .settings-list{display:flex;flex-direction:column;gap:0.6rem;padding:0 var(--space-5);}
   .settings-row{display:flex;align-items:center;gap:var(--space-3);background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-md);padding:0.2rem var(--space-3);}
   .settings-input{flex:1;background:transparent;border:none;padding:0.85rem 0.2rem;color:var(--text);font-size:1rem;min-width:0;}
-  .settings-icon-btn{width:2.1rem;height:2.1rem;display:grid;place-items:center;color:var(--text-faint);flex:0 0 auto;}
-  .add-zone-fab{align-self:flex-end;width:2.6rem;height:2.6rem;border-radius:50%;background:var(--purple);color:#fff;display:grid;place-items:center;font-size:1.4rem;font-weight:700;margin:0.4rem var(--space-5) 0;box-shadow:0 6px 18px var(--purple-glow);}
+  .settings-icon-btn{width:2.1rem;height:2.1rem;display:grid;place-items:center;color:var(--text-faint);flex:0 0 auto;line-height:0;}
+  .settings-icon-btn svg{width:1.1rem;height:1.1rem;stroke:currentColor;fill:none;}
+  .add-zone-fab{align-self:flex-end;width:2.6rem;height:2.6rem;border-radius:50%;background:var(--purple);color:#fff;display:grid;place-items:center;font-size:1.4rem;font-weight:700;margin:0.4rem var(--space-5) 0;box-shadow:0 6px 18px var(--purple-glow);line-height:0;}
+  .add-zone-fab svg{width:1.3rem;height:1.3rem;stroke:currentColor;fill:none;}
 
   .app-title-row{padding:0 var(--space-5) var(--space-3);}
 
@@ -195,7 +196,7 @@
   .tab-btn{display:flex;flex-direction:column;align-items:center;gap:0.25rem;color:var(--text-faint);flex:1;padding:0.3rem 0;min-height:44px;}
   .tab-btn svg{width:1.3rem;height:1.3rem;stroke:currentColor;fill:none;}
   .tab-btn.active{color:var(--purple-soft);}
-  .tab-btn span{font-size:0.68rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;}
+  .tab-btn span:last-child{font-size:0.68rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;}
 
   .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:flex-end;justify-content:center;z-index:200;}
   .modal-backdrop.open{display:flex;}
@@ -230,7 +231,7 @@
       <div style="padding:var(--space-3) var(--space-5) 0;">
         <div class="detail-topbar">
           <button class="back-btn" id="detailBack" aria-label="Back to zones"><svg viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></button>
-          <button class="icon-btn" id="detailAdvanced" aria-label="Zone options" style="visibility:hidden;">⋯</button>
+          <button class="icon-btn" id="detailAdvanced" aria-label="Zone options" style="visibility:hidden;">&#8942;</button>
         </div>
       </div>
       <div class="detail-hero">
@@ -316,7 +317,7 @@
       </div>
       <div class="section-label" style="padding:0 var(--space-5);">Zones</div>
       <div class="settings-list" id="settingsZoneList"></div>
-      <button class="add-zone-fab" id="editSourcesFab" title="Edit source names" aria-label="Edit source names"><svg viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:1.3rem;height:1.3rem;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button>
+      <button class="add-zone-fab" id="editSourcesFab" title="Edit source names" aria-label="Edit source names"><svg viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button>
     </section>
 
     <div class="tabbar">
@@ -380,6 +381,12 @@
       errorBanner.classList.add('show'); errorBanner.textContent = message;
     }
 
+    async function extractErrorDetail(res) {
+      let detail = '';
+      try { const j = await res.json(); detail = j && j.error ? j.error : ''; } catch (_e) { try { detail = await res.text(); } catch (_e2) { detail = ''; } }
+      return detail;
+    }
+
     function switchView(id) {
       [viewList, viewDetail, viewSettings].forEach(v => v.classList.remove('active'));
       document.getElementById(id).classList.add('active');
@@ -403,8 +410,7 @@
         res = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(slice) });
       }
       if (!res.ok) {
-        let detail = '';
-        try { const j = await res.json(); detail = j && j.error ? j.error : ''; } catch (_e) { try { detail = await res.text(); } catch (_e2) { detail = ''; } }
+        const detail = await extractErrorDetail(res);
         throw new Error(detail || `Request failed (${res.status})`);
       }
       cfg = await res.json();
@@ -428,7 +434,7 @@
         if (!res.ok) throw new Error('unavailable');
         const json = await res.json();
         if (json.online) { serialBanner.classList.remove('show'); }
-        else { serialBanner.classList.add('show'); serialBanner.textContent = `Serial offline (${json.path || 'unknown'})`; }
+        else { serialBanner.classList.add('show'); serialBanner.textContent = `Serial offline (${json.path || 'unknown'}). Zone power/volume/source commands will fail until the amp connection is restored.`; }
       } catch (_e) {
         serialBanner.classList.add('show'); serialBanner.textContent = 'Serial status unavailable';
       }
@@ -487,15 +493,22 @@
         powerBtn.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v9"/><path d="M18.36 6.64a9 9 0 1 1-12.72 0"/></svg>';
         powerBtn.addEventListener('click', async (ev) => {
           ev.stopPropagation();
+          const next = !Boolean(zoneState[zoneKey]?.power);
           try {
-            const next = !Boolean(zoneState[zoneKey]?.power);
             const res = await fetch(`/api/zone/${zoneKey}/power`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: next }) });
-            if (!res.ok) throw new Error(await res.text());
+            if (!res.ok) {
+              const detail = await extractErrorDetail(res);
+              throw new Error(detail || `Request failed (${res.status})`);
+            }
             zoneState[zoneKey] = zoneState[zoneKey] || {};
             zoneState[zoneKey].power = next;
             renderList();
             showError('');
-          } catch (err) { showError(`Power command failed for zone ${zoneKey}.`); console.error(err); }
+          } catch (err) {
+            showError(`Power command failed for zone ${zoneKey}: ${err.message || 'unknown error'}`);
+            console.error('Power toggle failed', zoneKey, err);
+            refreshSerialStatus();
+          }
         });
 
         const chartBtn = document.createElement('button');
@@ -552,13 +565,16 @@
         tile.addEventListener('click', async () => {
           try {
             const res = await fetch(`/api/zone/${zoneKey}/source`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: s }) });
-            if (!res.ok) throw new Error(await res.text());
+            if (!res.ok) {
+              const detail = await extractErrorDetail(res);
+              throw new Error(detail || `Request failed (${res.status})`);
+            }
             zoneState[zoneKey] = zoneState[zoneKey] || {};
             zoneState[zoneKey].source = s;
             renderDetail(zoneKey);
             renderList();
             showError('');
-          } catch (err) { showError(`Source change failed for zone ${zoneKey}.`); console.error(err); }
+          } catch (err) { showError(`Source change failed for zone ${zoneKey}: ${err.message || 'unknown error'}`); console.error(err); }
         });
         sourceGrid.appendChild(tile);
       }
@@ -600,10 +616,13 @@
       volumeDebouncers[zoneKey] = setTimeout(async () => {
         try {
           const res = await fetch(`/api/zone/${zoneKey}/volume`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ volume: value }) });
-          if (!res.ok) throw new Error(await res.text());
+          if (!res.ok) {
+            const detail = await extractErrorDetail(res);
+            throw new Error(detail || `Request failed (${res.status})`);
+          }
           renderList();
           showError('');
-        } catch (err) { showError(`Volume change failed for zone ${zoneKey}.`); console.error(err); }
+        } catch (err) { showError(`Volume change failed for zone ${zoneKey}: ${err.message || 'unknown error'}`); console.error(err); }
       }, 260);
     });
 
@@ -616,11 +635,14 @@
       try {
         const bass = parseInt(bassRange.value, 10) || 0;
         const res = await fetch(`/api/zone/${activeZone}/bass`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bass }) });
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+          const detail = await extractErrorDetail(res);
+          throw new Error(detail || `Request failed (${res.status})`);
+        }
         zoneState[activeZone] = zoneState[activeZone] || {};
         zoneState[activeZone].bass = bass;
         showError('');
-      } catch (err) { showError(`Bass change failed for zone ${activeZone}.`); console.error(err); }
+      } catch (err) { showError(`Bass change failed for zone ${activeZone}: ${err.message || 'unknown error'}`); console.error(err); }
     });
 
     trebleRange.addEventListener('input', () => {
@@ -632,11 +654,14 @@
       try {
         const treble = parseInt(trebleRange.value, 10) || 0;
         const res = await fetch(`/api/zone/${activeZone}/treble`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ treble }) });
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+          const detail = await extractErrorDetail(res);
+          throw new Error(detail || `Request failed (${res.status})`);
+        }
         zoneState[activeZone] = zoneState[activeZone] || {};
         zoneState[activeZone].treble = treble;
         showError('');
-      } catch (err) { showError(`Treble change failed for zone ${activeZone}.`); console.error(err); }
+      } catch (err) { showError(`Treble change failed for zone ${activeZone}: ${err.message || 'unknown error'}`); console.error(err); }
     });
 
     balanceRange.addEventListener('input', () => {
@@ -649,11 +674,14 @@
       try {
         const balance = parseInt(balanceRange.value, 10) || 10;
         const res = await fetch(`/api/zone/${activeZone}/balance`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ balance }) });
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+          const detail = await extractErrorDetail(res);
+          throw new Error(detail || `Request failed (${res.status})`);
+        }
         zoneState[activeZone] = zoneState[activeZone] || {};
         zoneState[activeZone].balance = balance;
         showError('');
-      } catch (err) { showError(`Balance change failed for zone ${activeZone}.`); console.error(err); }
+      } catch (err) { showError(`Balance change failed for zone ${activeZone}: ${err.message || 'unknown error'}`); console.error(err); }
     });
 
     autoOffToggle.addEventListener('click', async () => {
@@ -664,7 +692,7 @@
         await patchConfig({ automation: { zones: { [activeZone]: { enabled } } } });
         autoOffToggle.className = `toggle ${enabled ? 'on' : ''}`;
         showError('');
-      } catch (err) { showError(`Failed to update auto-off for zone ${activeZone}.`); console.error(err); }
+      } catch (err) { showError(`Failed to update auto-off for zone ${activeZone}: ${err.message || 'unknown error'}`); console.error(err); }
     });
 
     autoOffTimer.addEventListener('change', async () => {
@@ -674,7 +702,7 @@
         ensureAutomationZone(activeZone).minutes = minutes;
         await patchConfig({ automation: { zones: { [activeZone]: { minutes } } } });
         showError('');
-      } catch (err) { showError(`Failed to save timer for zone ${activeZone}.`); console.error(err); }
+      } catch (err) { showError(`Failed to save timer for zone ${activeZone}: ${err.message || 'unknown error'}`); console.error(err); }
     });
 
     function renderSettings() {
@@ -691,17 +719,18 @@
         input.addEventListener('blur', async () => {
           try {
             const name = input.value.trim() || `Zone ${zoneKey}`;
+            if (cfg.zones?.[zoneKey]?.name === name) return;
             cfg.zones[zoneKey] = cfg.zones[zoneKey] || {};
             cfg.zones[zoneKey].name = name;
             await patchConfig({ zones: { [zoneKey]: { name } } });
             showError('');
-          } catch (err) { showError(`Failed to save zone ${zoneKey} name.`); console.error(err); }
+          } catch (err) { showError(`Failed to save zone ${zoneKey} name: ${err.message || 'unknown error'}`); console.error(err); }
         });
         input.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') input.blur(); });
         const gearBtn = document.createElement('button');
         gearBtn.type = 'button';
         gearBtn.className = 'settings-icon-btn';
-        gearBtn.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1.1rem;height:1.1rem;stroke:currentColor;fill:none;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>';
+        gearBtn.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>';
         gearBtn.setAttribute('aria-label', `Open ${zoneCfg.name || zoneKey} advanced settings`);
         gearBtn.addEventListener('click', () => openDetail(zoneKey));
         row.append(input, gearBtn);
@@ -718,13 +747,13 @@
         for (let z = 1; z <= 6; z += 1) {
           const zoneKey = String(z);
           if (zoneState[zoneKey]?.power) {
-            await fetch(`/api/zone/${zoneKey}/power`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: false }) });
-            zoneState[zoneKey].power = false;
+            const res = await fetch(`/api/zone/${zoneKey}/power`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: false }) });
+            if (res.ok) zoneState[zoneKey].power = false;
           }
         }
         renderList();
         showError('');
-      } catch (err) { showError('Failed to turn off all zones.'); console.error(err); }
+      } catch (err) { showError(`Failed to turn off all zones: ${err.message || 'unknown error'}`); console.error(err); }
     });
 
     appTitleInput.addEventListener('blur', async () => {
@@ -766,7 +795,7 @@
         await patchConfig({ sourceNames });
         sourcesModalBackdrop.classList.remove('open');
         showError('');
-      } catch (err) { showError('Failed to save source names.'); console.error(err); }
+      } catch (err) { showError(`Failed to save source names: ${err.message || 'unknown error'}`); console.error(err); }
     });
 
     function setActiveTab(id) {
