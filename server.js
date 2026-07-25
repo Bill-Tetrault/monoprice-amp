@@ -491,7 +491,7 @@ app.get('/api/config', (_req, res) => {
   res.json(config);
 });
 
-function handleConfigPatch(req, res) {
+app.patch('/api/config', (req, res) => {
   try {
     const body = req.body;
     if (typeof body !== 'object' || body === null || Array.isArray(body)) {
@@ -561,10 +561,7 @@ function handleConfigPatch(req, res) {
   } catch (err) {
     res.status(500).json({ error: err.message || 'internal error' });
   }
-}
-
-app.patch('/api/config', handleConfigPatch);
-app.post('/api/config', handleConfigPatch);
+});
 
 app.listen(PORT, () => {
   console.log(`Monoprice 10761 controller listening on port ${PORT}`);
