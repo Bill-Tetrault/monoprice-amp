@@ -495,17 +495,12 @@ function handleConfigPatch(req, res) {
   try {
     const body = req.body;
     if (typeof body !== 'object' || body === null || Array.isArray(body)) {
-      console.error('[config] rejected non-object body:', JSON.stringify(body));
       return res.status(400).json({ error: 'body must be an object' });
     }
 
     const allowedTop = new Set(['title', 'theme', 'sourceNames', 'zones', 'automation']);
-    const bodyKeys = Object.keys(body);
-    for (const key of bodyKeys) {
-      if (!allowedTop.has(key)) {
-        console.error(`[config] rejected unknown top-level key "${key}". Full payload:`, JSON.stringify(body), 'Allowed:', Array.from(allowedTop));
-        return res.status(400).json({ error: `unknown top-level key: ${key}` });
-      }
+    for (const key of Object.keys(body)) {
+      if (!allowedTop.has(key)) return res.status(400).json({ error: `unknown top-level key: ${key}` });
     }
 
     if (body.title !== undefined && typeof body.title !== 'string') {
