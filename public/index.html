@@ -2,21 +2,28 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Audio Control</title>
+<title>Whole-Home Audio</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
-    --bg:#12151c;
-    --bg-elev:#1a1e28;
-    --bg-row:#1e2330;
-    --border:#2a2f3d;
-    --text:#f4f2ee;
-    --text-muted:#9aa0b4;
-    --text-faint:#666c80;
-    --coral:#ff6b4a;
-    --coral-soft:#ff8a68;
-    --coral-dim:#4a3226;
+    --bg:#121017;
+    --bg-elev:#1b1824;
+    --bg-elev-2:#211d2c;
+    --border:#2d2838;
+    --text:#f4f2f8;
+    --text-muted:#a29cb5;
+    --text-faint:#6f6a80;
+    --purple:#8b5cf6;
+    --purple-soft:#a78bfa;
+    --purple-strong:#6d28d9;
+    --purple-glow:rgba(139,92,246,0.35);
     --success:#38c793;
+    --warn-bg:#3a2e17;
+    --warn-border:#8a6a25;
+    --warn-text:#f0c78a;
+    --err-bg:#3a1c22;
+    --err-border:#6b2c38;
+    --err-text:#f5a5b0;
     --radius-md:0.9rem;
     --radius-lg:1.2rem;
     --radius-full:9999px;
@@ -39,22 +46,32 @@
   }
   button,input,select{font:inherit;color:inherit;}
   button{cursor:pointer;background:none;border:none;}
-  input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;}
-  :focus-visible{outline:2px solid var(--coral);outline-offset:2px;border-radius:6px;}
+  input[type=range]{
+    -webkit-appearance:none;-moz-appearance:none;appearance:none;
+    background:transparent;width:100%;height:100%;margin:0;display:block;
+  }
+  input[type=range]::-webkit-slider-runnable-track{-webkit-appearance:none;background:transparent;border:none;height:100%;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:0;height:0;background:transparent;border:none;box-shadow:none;}
+  input[type=range]::-moz-range-track{background:transparent;border:none;height:100%;}
+  input[type=range]::-moz-range-thumb{width:0;height:0;background:transparent;border:none;box-shadow:none;}
+  input[type=range]::-moz-range-progress{background:transparent;}
+  input[type=range]:focus{outline:none;}
+  :focus-visible{outline:2px solid var(--purple-soft);outline-offset:2px;border-radius:6px;}
 
-  .shell{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-bottom:5.5rem;position:relative;}
+  .shell{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-bottom:5.5rem;}
 
   .statusbar{display:flex;justify-content:space-between;align-items:center;padding:0.6rem var(--space-5) 0;font-size:0.8rem;color:var(--text-muted);}
 
   .topbar{display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-5) var(--space-4);}
   .topbar-title{font-size:0.78rem;font-weight:700;letter-spacing:0.14em;color:var(--text-muted);text-transform:uppercase;}
-  .back-btn,.icon-btn{width:2.4rem;height:2.4rem;display:grid;place-items:center;border-radius:var(--radius-full);color:var(--text);}
+  .back-btn,.icon-btn{width:2.4rem;height:2.4rem;display:grid;place-items:center;border-radius:var(--radius-full);color:var(--text);flex:0 0 auto;}
   .icon-btn{color:var(--text-muted);}
-  .icon-btn:active,.back-btn:active{background:var(--bg-row);}
+  .icon-btn:active,.back-btn:active{background:var(--bg-elev-2);}
 
   .banner{margin:0 var(--space-5) var(--space-3);padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);font-size:0.85rem;display:none;}
-  .banner.warn{display:block;background:#3a2a17;border:1px solid #6b4a20;color:#f0c78a;}
-  .banner.err{display:block;background:#3a1c22;border:1px solid #6b2c38;color:#f5a5b0;}
+  .banner.show{display:block;}
+  .banner.warn{background:var(--warn-bg);border:1px solid var(--warn-border);color:var(--warn-text);}
+  .banner.err{background:var(--err-bg);border:1px solid var(--err-border);color:var(--err-text);}
 
   .view{display:none;flex-direction:column;flex:1;}
   .view.active{display:flex;}
@@ -63,71 +80,71 @@
 
   .zone-row{
     background:var(--bg-elev);
+    border:1px solid var(--border);
     border-radius:var(--radius-lg);
     display:flex;
     align-items:center;
     gap:var(--space-3);
-    padding:var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+    padding:var(--space-3);
     min-height:64px;
-    position:relative;
-    overflow:hidden;
-    transition:background var(--transition);
+    transition:background var(--transition), border-color var(--transition);
   }
-  .zone-row.is-on{background:linear-gradient(90deg, var(--coral) 0%, var(--coral) 38%, var(--bg-elev) 38%);}
-  .zone-row-main{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;text-align:left;padding:0.2rem 0;}
-  .zone-row-main-btn{display:flex;flex-direction:column;text-align:left;flex:1;min-width:0;padding:0.4rem 0;}
-  .zone-name{font-size:1.05rem;font-weight:600;line-height:1.2;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .zone-row.is-on .zone-name{color:#1b0f08;}
-  .zone-sub{font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:0.15rem;}
-  .zone-row.is-on .zone-sub{color:rgba(20,10,5,0.65);}
-  .zone-vol-badge{position:absolute;right:6.6rem;top:50%;transform:translateY(-50%);font-size:0.78rem;font-weight:700;color:rgba(20,10,5,0.65);display:none;}
+  .zone-row.is-on{background:linear-gradient(135deg, var(--purple-strong), var(--purple));border-color:transparent;box-shadow:0 8px 22px var(--purple-glow);}
+
+  .zone-row-main-btn{display:flex;flex-direction:column;text-align:left;flex:1;min-width:0;gap:0.15rem;padding:0.2rem 0;}
+  .zone-name{font-size:1.05rem;font-weight:700;line-height:1.2;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .zone-row.is-on .zone-name{color:#fff;}
+  .zone-sub{font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;}
+  .zone-row.is-on .zone-sub{color:rgba(255,255,255,0.78);}
+
+  .zone-vol-badge{flex:0 0 auto;font-size:0.78rem;font-weight:700;color:rgba(255,255,255,0.85);display:none;}
   .zone-row.is-on .zone-vol-badge{display:block;}
 
   .zone-actions{display:flex;align-items:center;gap:0.5rem;flex:0 0 auto;}
   .power-btn,.chart-btn{
-    width:2.6rem;height:2.6rem;border-radius:0.85rem;display:grid;place-items:center;
-    background:rgba(255,255,255,0.06);color:var(--text-muted);flex:0 0 auto;
+    width:2.5rem;height:2.5rem;border-radius:0.8rem;display:grid;place-items:center;
+    background:rgba(255,255,255,0.05);color:var(--text-muted);flex:0 0 auto;font-size:1rem;
   }
-  .zone-row.is-on .power-btn{background:rgba(0,0,0,0.18);color:#fff;}
-  .zone-row.is-on .chart-btn{background:rgba(0,0,0,0.18);color:#1b0f08;}
-  .power-btn.on{color:var(--coral);}
+  .zone-row.is-on .power-btn,.zone-row.is-on .chart-btn{background:rgba(0,0,0,0.22);color:#fff;}
+  .power-btn.on{color:var(--purple-soft);}
   .zone-row.is-on .power-btn.on{color:#fff;}
-  .chart-btn{color:var(--text-faint);}
 
   .allbar{padding:var(--space-4) var(--space-5) 0;display:flex;justify-content:flex-end;}
   .all-off-btn{background:var(--bg-elev);border:1px solid var(--border);color:var(--text-muted);padding:0.55rem 1rem;border-radius:var(--radius-md);font-size:0.8rem;font-weight:700;letter-spacing:0.04em;}
 
   .detail-hero{
-    background:linear-gradient(180deg, var(--coral) 0%, var(--coral-soft) 55%, var(--bg) 55%);
-    padding:0 var(--space-5) var(--space-4);
+    background:linear-gradient(135deg, var(--purple-strong), var(--purple));
+    margin:0 var(--space-5);
+    border-radius:var(--radius-lg);
+    padding:var(--space-4) var(--space-4) var(--space-5);
     display:flex;flex-direction:column;gap:var(--space-4);
   }
-  .detail-title{font-size:2rem;font-weight:800;color:#1b0f08;margin:0.3rem 0 0;}
-  .detail-topbar{display:flex;align-items:center;justify-content:space-between;padding-top:0.5rem;}
-  .detail-topbar .back-btn{color:#1b0f08;}
-  .detail-topbar .icon-btn{color:rgba(20,10,5,0.7);}
+  .detail-title{font-size:1.9rem;font-weight:800;color:#fff;margin:0.2rem 0 0;}
+  .detail-topbar{display:flex;align-items:center;justify-content:space-between;}
+  .detail-topbar .back-btn{color:#fff;}
+  .detail-topbar .icon-btn{color:rgba(255,255,255,0.78);}
 
   .tone-card{
-    background:rgba(20,10,5,0.22);
+    background:rgba(0,0,0,0.22);
     border-radius:var(--radius-lg);
     padding:var(--space-4);
-    display:flex;flex-direction:column;gap:var(--space-3);
+    display:flex;flex-direction:column;gap:var(--space-4);
   }
-  .tone-row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);}
-  .tone-label{font-size:0.95rem;font-weight:600;color:rgba(20,10,5,0.85);}
-  .tone-track{position:relative;height:34px;border-radius:0.6rem;background:rgba(20,10,5,0.18);overflow:hidden;flex:1;margin-left:var(--space-3);}
-  .tone-fill{position:absolute;inset:0;background:rgba(20,10,5,0.55);border-radius:0.6rem 0 0 0.6rem;pointer-events:none;}
-  .tone-track input[type=range]{position:absolute;inset:0;width:100%;height:100%;margin:0;cursor:pointer;}
-  .tone-value{position:absolute;right:0.6rem;top:0;bottom:0;display:flex;align-items:center;font-size:0.78rem;font-weight:700;color:rgba(20,10,5,0.85);pointer-events:none;}
+  .tone-row{display:flex;flex-direction:column;gap:0.5rem;}
+  .tone-row-head{display:flex;align-items:center;justify-content:space-between;}
+  .tone-label{font-size:0.9rem;font-weight:600;color:rgba(255,255,255,0.92);}
+  .tone-value{font-size:0.8rem;font-weight:700;color:rgba(255,255,255,0.85);font-variant-numeric:tabular-nums;}
+  .tone-track{position:relative;height:34px;border-radius:0.6rem;background:rgba(0,0,0,0.3);overflow:hidden;}
+  .tone-fill{position:absolute;top:0;left:0;bottom:0;background:rgba(255,255,255,0.3);border-radius:0.6rem 0 0 0.6rem;pointer-events:none;}
+  .tone-track input[type=range]{position:absolute;inset:0;width:100%;height:100%;margin:0;cursor:pointer;opacity:0;}
 
   .balance-row{display:flex;align-items:center;gap:var(--space-3);}
-  .balance-track{flex:1;height:34px;border-radius:0.6rem;background:rgba(20,10,5,0.18);position:relative;display:flex;align-items:center;padding:0 var(--space-3);justify-content:space-between;overflow:hidden;}
+  .balance-track{flex:1;height:34px;border-radius:0.6rem;background:rgba(0,0,0,0.3);position:relative;overflow:hidden;}
   .balance-track input[type=range]{position:absolute;inset:0;width:100%;height:100%;margin:0;cursor:pointer;opacity:0;}
-  .balance-tick{width:3px;height:16px;background:rgba(20,10,5,0.35);border-radius:2px;}
-  .balance-fill{position:absolute;top:0;bottom:0;width:3px;background:#1b0f08;border-radius:2px;}
-  .balance-lr{font-size:0.85rem;font-weight:700;color:rgba(20,10,5,0.75);}
+  .balance-fill{position:absolute;top:0.3rem;bottom:0.3rem;width:3px;background:#fff;border-radius:2px;}
+  .balance-lr{font-size:0.85rem;font-weight:700;color:rgba(255,255,255,0.82);flex:0 0 auto;}
 
-  .section-body{padding:var(--space-4) var(--space-5) var(--space-6);display:flex;flex-direction:column;gap:var(--space-5);}
+  .section-body{padding:var(--space-5) var(--space-5) var(--space-6);display:flex;flex-direction:column;gap:var(--space-5);}
 
   .source-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0.7rem;}
   .source-tile{
@@ -135,40 +152,44 @@
     padding:var(--space-4);min-height:78px;display:flex;align-items:center;justify-content:center;
     font-size:1rem;font-weight:600;color:var(--text);text-align:center;transition:background var(--transition),border-color var(--transition);
   }
-  .source-tile.selected{background:var(--coral);color:#1b0f08;border-color:transparent;font-weight:700;}
+  .source-tile.selected{background:var(--purple);color:#fff;border-color:transparent;font-weight:700;box-shadow:0 6px 18px var(--purple-glow);}
 
   .section-label{font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.6rem;}
+
+  .volume-card{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-4);}
+  .volume-card .tone-track{background:var(--bg-elev-2);}
+  .volume-card .tone-fill{background:var(--purple);}
+  .volume-card .tone-label,.volume-card .tone-value{color:var(--text);}
 
   .autooff-card{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-4);}
   .autooff-top{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);}
   .autooff-copy .t{font-size:0.95rem;font-weight:600;}
   .autooff-copy .s{font-size:0.78rem;color:var(--text-muted);margin-top:0.15rem;}
-  .toggle{width:3.1rem;height:1.85rem;border-radius:var(--radius-full);background:#2b2f3c;padding:0.15rem;display:flex;align-items:center;flex:0 0 auto;transition:background var(--transition);}
-  .toggle.on{background:var(--coral);}
+  .toggle{width:3.1rem;height:1.85rem;border-radius:var(--radius-full);background:#2b273a;padding:0.15rem;display:flex;align-items:center;flex:0 0 auto;transition:background var(--transition);}
+  .toggle.on{background:var(--purple);}
   .toggle-thumb{width:1.55rem;height:1.55rem;border-radius:50%;background:#fff;transition:transform var(--transition);}
   .toggle.on .toggle-thumb{transform:translateX(1.25rem);}
   .timer-row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);}
-  .timer-select{background:#20242f;border:1px solid var(--border);border-radius:0.7rem;padding:0.55rem 0.8rem;color:var(--text);min-height:40px;}
+  .timer-select{background:var(--bg-elev-2);border:1px solid var(--border);border-radius:0.7rem;padding:0.55rem 0.8rem;color:var(--text);min-height:40px;}
 
   .settings-list{display:flex;flex-direction:column;gap:0.6rem;padding:0 var(--space-5);}
   .settings-row{display:flex;align-items:center;gap:var(--space-3);background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-md);padding:0.2rem var(--space-3);}
-  .settings-input{flex:1;background:transparent;border:none;padding:0.85rem 0.2rem;color:var(--text);font-size:1rem;}
+  .settings-input{flex:1;background:transparent;border:none;padding:0.85rem 0.2rem;color:var(--text);font-size:1rem;min-width:0;}
   .settings-icon-btn{width:2.1rem;height:2.1rem;display:grid;place-items:center;color:var(--text-faint);flex:0 0 auto;}
-  .add-zone-fab{align-self:flex-end;width:2.6rem;height:2.6rem;border-radius:50%;background:var(--coral);color:#1b0f08;display:grid;place-items:center;font-size:1.4rem;font-weight:700;margin:0.4rem var(--space-5) 0;}
+  .add-zone-fab{align-self:flex-end;width:2.6rem;height:2.6rem;border-radius:50%;background:var(--purple);color:#fff;display:grid;place-items:center;font-size:1.4rem;font-weight:700;margin:0.4rem var(--space-5) 0;box-shadow:0 6px 18px var(--purple-glow);}
 
   .app-title-row{padding:0 var(--space-5) var(--space-3);}
-  .app-title-row .settings-row{}
 
   .tabbar{
     position:fixed;left:0;right:0;bottom:0;
     max-width:480px;margin:0 auto;
-    background:rgba(18,21,28,0.92);backdrop-filter:blur(14px);
+    background:rgba(18,16,23,0.92);backdrop-filter:blur(14px);
     border-top:1px solid var(--border);
     display:flex;justify-content:space-around;align-items:center;
     padding:0.5rem var(--space-3) calc(0.5rem + env(safe-area-inset-bottom));
   }
   .tab-btn{display:flex;flex-direction:column;align-items:center;gap:0.25rem;color:var(--text-faint);flex:1;padding:0.3rem 0;min-height:44px;}
-  .tab-btn.active{color:var(--coral);}
+  .tab-btn.active{color:var(--purple-soft);}
   .tab-btn span{font-size:0.68rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;}
 
   .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:flex-end;justify-content:center;z-index:200;}
@@ -177,8 +198,8 @@
   .sheet-handle{width:2.4rem;height:0.28rem;border-radius:99px;background:var(--border);margin:0 auto var(--space-2);}
   .sheet-field{display:flex;flex-direction:column;gap:0.4rem;}
   .sheet-field label{font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;}
-  .sheet-input{background:#20242f;border:1px solid var(--border);border-radius:0.75rem;padding:0.8rem 0.9rem;color:var(--text);}
-  .sheet-save{margin-top:var(--space-2);background:var(--coral);color:#1b0f08;font-weight:700;border-radius:var(--radius-md);padding:0.85rem;text-align:center;}
+  .sheet-input{background:var(--bg-elev-2);border:1px solid var(--border);border-radius:0.75rem;padding:0.8rem 0.9rem;color:var(--text);}
+  .sheet-save{margin-top:var(--space-2);background:var(--purple);color:#fff;font-weight:700;border-radius:var(--radius-md);padding:0.85rem;text-align:center;}
 
   @media (prefers-reduced-motion: reduce){*,*::before,*::after{transition-duration:0.01ms !important;}}
 </style>
@@ -192,7 +213,7 @@
     <!-- LIST VIEW -->
     <section class="view active" id="viewList">
       <div class="topbar">
-        <div class="topbar-title" id="listTitle">AUDIO CONTROL</div>
+        <div class="topbar-title" id="listTitle">WHOLE-HOME AUDIO</div>
         <button class="icon-btn" id="openSettingsBtn" aria-label="Open settings">⚙</button>
       </div>
       <div class="zone-list" id="zoneList"></div>
@@ -201,36 +222,39 @@
 
     <!-- DETAIL VIEW -->
     <section class="view" id="viewDetail">
-      <div class="detail-hero">
+      <div style="padding:var(--space-3) var(--space-5) 0;">
         <div class="detail-topbar">
           <button class="back-btn" id="detailBack" aria-label="Back to zones">←</button>
-          <button class="icon-btn" id="detailAdvanced" aria-label="Zone options">⋯</button>
+          <button class="icon-btn" id="detailAdvanced" aria-label="Zone options" style="visibility:hidden;">⋯</button>
         </div>
+      </div>
+      <div class="detail-hero">
         <h1 class="detail-title" id="detailName">Zone</h1>
         <div class="tone-card">
           <div class="tone-row">
-            <span class="tone-label">Bass</span>
+            <div class="tone-row-head"><span class="tone-label">Bass</span><span class="tone-value" id="bassValue">0%</span></div>
             <div class="tone-track">
               <div class="tone-fill" id="bassFill"></div>
               <input type="range" min="0" max="14" id="bassRange">
-              <span class="tone-value" id="bassValue">0%</span>
             </div>
           </div>
           <div class="tone-row">
-            <span class="tone-label">Treble</span>
+            <div class="tone-row-head"><span class="tone-label">Treble</span><span class="tone-value" id="trebleValue">0%</span></div>
             <div class="tone-track">
               <div class="tone-fill" id="trebleFill"></div>
               <input type="range" min="0" max="14" id="trebleRange">
-              <span class="tone-value" id="trebleValue">0%</span>
             </div>
           </div>
-          <div class="balance-row">
-            <span class="balance-lr">L</span>
-            <div class="balance-track">
-              <div class="balance-fill" id="balanceFill"></div>
-              <input type="range" min="0" max="20" id="balanceRange">
+          <div class="tone-row">
+            <div class="tone-row-head"><span class="tone-label">Balance</span><span class="tone-value" id="balanceValueLabel">Center</span></div>
+            <div class="balance-row">
+              <span class="balance-lr">L</span>
+              <div class="balance-track">
+                <div class="balance-fill" id="balanceFill"></div>
+                <input type="range" min="0" max="20" id="balanceRange">
+              </div>
+              <span class="balance-lr">R</span>
             </div>
-            <span class="balance-lr">R</span>
           </div>
         </div>
       </div>
@@ -243,13 +267,12 @@
 
         <div>
           <div class="section-label">Volume</div>
-          <div class="tone-card" style="background:var(--bg-elev);">
+          <div class="volume-card">
             <div class="tone-row">
-              <span class="tone-label" id="volumeLabel">Volume</span>
-              <div class="tone-track" style="background:#20242f;">
-                <div class="tone-fill" id="volumeFill" style="background:var(--coral);"></div>
+              <div class="tone-row-head"><span class="tone-label" id="volumeLabel">Volume</span><span class="tone-value" id="volumeValue">0</span></div>
+              <div class="tone-track">
+                <div class="tone-fill" id="volumeFill"></div>
                 <input type="range" min="0" max="38" id="volumeRange">
-                <span class="tone-value" id="volumeValue" style="color:#fff;">0</span>
               </div>
             </div>
           </div>
@@ -266,7 +289,7 @@
               <button class="toggle" id="autoOffToggle" aria-label="Toggle auto-off"><span class="toggle-thumb"></span></button>
             </div>
             <div class="timer-row">
-              <span class="tone-label">Turn off after</span>
+              <span class="tone-label" style="color:var(--text-muted);">Turn off after</span>
               <select class="timer-select" id="autoOffTimer"></select>
             </div>
           </div>
@@ -334,6 +357,7 @@
     const trebleValue = document.getElementById('trebleValue');
     const balanceRange = document.getElementById('balanceRange');
     const balanceFill = document.getElementById('balanceFill');
+    const balanceValueLabel = document.getElementById('balanceValueLabel');
     const volumeRange = document.getElementById('volumeRange');
     const volumeFill = document.getElementById('volumeFill');
     const volumeValue = document.getElementById('volumeValue');
@@ -347,8 +371,8 @@
     const sourcesForm = document.getElementById('sourcesForm');
 
     function showError(message) {
-      if (!message) { errorBanner.className = 'banner err'; errorBanner.textContent = ''; return; }
-      errorBanner.className = 'banner err'; errorBanner.style.display = 'block'; errorBanner.textContent = message;
+      if (!message) { errorBanner.classList.remove('show'); errorBanner.textContent = ''; return; }
+      errorBanner.classList.add('show'); errorBanner.textContent = message;
     }
 
     function switchView(id) {
@@ -376,9 +400,9 @@
       const res = await fetch('/api/config');
       if (!res.ok) throw new Error(await res.text());
       cfg = await res.json();
-      listTitle.textContent = (cfg.title || 'Audio Control').toUpperCase();
-      appTitleInput.value = cfg.title || 'Audio Control';
-      document.title = cfg.title || 'Audio Control';
+      listTitle.textContent = (cfg.title || 'Whole-Home Audio').toUpperCase();
+      appTitleInput.value = cfg.title || 'Whole-Home Audio';
+      document.title = cfg.title || 'Whole-Home Audio';
     }
 
     async function refreshSerialStatus() {
@@ -386,10 +410,10 @@
         const res = await fetch('/api/serial-status');
         if (!res.ok) throw new Error('unavailable');
         const json = await res.json();
-        if (json.online) { serialBanner.style.display = 'none'; }
-        else { serialBanner.style.display = 'block'; serialBanner.textContent = `Serial offline (${json.path || 'unknown'})`; }
+        if (json.online) { serialBanner.classList.remove('show'); }
+        else { serialBanner.classList.add('show'); serialBanner.textContent = `Serial offline (${json.path || 'unknown'})`; }
       } catch (_e) {
-        serialBanner.style.display = 'block'; serialBanner.textContent = 'Serial status unavailable';
+        serialBanner.classList.add('show'); serialBanner.textContent = 'Serial status unavailable';
       }
     }
 
@@ -415,6 +439,7 @@
         const zoneCfg = cfg.zones?.[zoneKey] || {};
         const state = zoneState[zoneKey] || { power: false, source: 1, volume: 0 };
         const sourceName = cfg.sourceNames?.[String(state.source)] || `Source ${state.source}`;
+        const maxVol = zoneCfg.maxVolume ?? 38;
 
         const row = document.createElement('div');
         row.className = `zone-row ${state.power ? 'is-on' : ''}`;
@@ -434,7 +459,7 @@
 
         const volBadge = document.createElement('div');
         volBadge.className = 'zone-vol-badge';
-        volBadge.textContent = `${Math.round(((state.volume ?? 0) / (zoneCfg.maxVolume ?? 38)) * 100)}%`;
+        volBadge.textContent = `${Math.round(((state.volume ?? 0) / maxVol) * 100)}%`;
 
         const actions = document.createElement('div');
         actions.className = 'zone-actions';
@@ -459,7 +484,7 @@
         const chartBtn = document.createElement('button');
         chartBtn.type = 'button';
         chartBtn.className = 'chart-btn';
-        chartBtn.textContent = '⌁';
+        chartBtn.textContent = '›';
         chartBtn.setAttribute('aria-label', `Open ${zoneCfg.name || zoneKey} details`);
         chartBtn.addEventListener('click', (ev) => { ev.stopPropagation(); openDetail(zoneKey); });
 
@@ -485,6 +510,12 @@
       activeZone = zoneKey;
       renderDetail(zoneKey);
       switchView('viewDetail');
+    }
+
+    function balanceLabel(v) {
+      if (v < 8) return 'Left';
+      if (v > 12) return 'Right';
+      return 'Center';
     }
 
     function renderDetail(zoneKey) {
@@ -532,6 +563,7 @@
 
       balanceRange.value = String(state.balance ?? 10);
       balanceFill.style.left = `${((state.balance ?? 10) / 20) * 100}%`;
+      balanceValueLabel.textContent = balanceLabel(Number(state.balance ?? 10));
 
       autoOffToggle.className = `toggle ${automation.enabled ? 'on' : ''}`;
       buildTimerOptions(autoOffTimer, zoneKey);
@@ -591,7 +623,9 @@
     });
 
     balanceRange.addEventListener('input', () => {
-      balanceFill.style.left = `${(parseInt(balanceRange.value, 10) / 20) * 100}%`;
+      const v = parseInt(balanceRange.value, 10) || 10;
+      balanceFill.style.left = `${(v / 20) * 100}%`;
+      balanceValueLabel.textContent = balanceLabel(v);
     });
     balanceRange.addEventListener('change', async () => {
       if (!activeZone) return;
@@ -661,7 +695,6 @@
     document.getElementById('openSettingsBtn').addEventListener('click', () => { renderSettings(); switchView('viewSettings'); setActiveTab('tabServer'); });
     document.getElementById('settingsBack').addEventListener('click', () => { switchView('viewList'); setActiveTab('tabZones'); });
     document.getElementById('detailBack').addEventListener('click', () => { activeZone = null; switchView('viewList'); setActiveTab('tabZones'); });
-    document.getElementById('detailAdvanced').addEventListener('click', () => { if (activeZone) openDetail(activeZone); });
 
     document.getElementById('allOffBtn').addEventListener('click', async () => {
       try {
@@ -679,7 +712,7 @@
 
     appTitleInput.addEventListener('blur', async () => {
       try {
-        const title = appTitleInput.value.trim() || 'Audio Control';
+        const title = appTitleInput.value.trim() || 'Whole-Home Audio';
         await patchConfig({ title });
         listTitle.textContent = title.toUpperCase();
         showError('');
