@@ -164,6 +164,13 @@
   .volume-card .tone-track{background:var(--bg-elev-2);}
   .volume-card .tone-fill{background:var(--purple);}
   .volume-card .tone-label,.volume-card .tone-value{color:var(--text);}
+  .volume-stepper{display:flex;align-items:center;background:var(--bg-elev-2);border-radius:0.6rem;overflow:hidden;height:44px;}
+  .volume-stepper-btn{flex:1;height:100%;display:flex;align-items:center;justify-content:center;background:var(--purple);color:#fff;font-size:1.3rem;font-weight:700;line-height:0;transition:background var(--transition);}
+  .volume-stepper-btn:first-child{border-radius:0.6rem 0 0 0.6rem;}
+  .volume-stepper-btn:last-child{border-radius:0 0.6rem 0.6rem 0;}
+  .volume-stepper-btn:active{background:var(--purple-strong);}
+  .volume-stepper-divider{width:1px;height:100%;background:rgba(0,0,0,0.25);flex:0 0 auto;}
+  .volume-stepper-btn svg{width:1.2rem;height:1.2rem;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;}
 
   .autooff-card{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-4);}
   .autooff-top{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);}
@@ -275,9 +282,10 @@
           <div class="volume-card">
             <div class="tone-row">
               <div class="tone-row-head"><span class="tone-label" id="volumeLabel">Volume</span><span class="tone-value" id="volumeValue">0</span></div>
-              <div class="tone-track">
-                <div class="tone-fill" id="volumeFill"></div>
-                <input type="range" min="0" max="38" id="volumeRange">
+              <div class="volume-stepper">
+                <button type="button" class="volume-stepper-btn" id="volumeDownBtn" aria-label="Decrease volume"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+                <div class="volume-stepper-divider"></div>
+                <button type="button" class="volume-stepper-btn" id="volumeUpBtn" aria-label="Increase volume"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
               </div>
             </div>
           </div>
@@ -363,8 +371,8 @@
     const balanceRange = document.getElementById('balanceRange');
     const balanceFill = document.getElementById('balanceFill');
     const balanceValueLabel = document.getElementById('balanceValueLabel');
-    const volumeRange = document.getElementById('volumeRange');
-    const volumeFill = document.getElementById('volumeFill');
+    const volumeUpBtn = document.getElementById('volumeUpBtn');
+    const volumeDownBtn = document.getElementById('volumeDownBtn');
     const volumeValue = document.getElementById('volumeValue');
     const volumeLabel = document.getElementById('volumeLabel');
     const autoOffToggle = document.getElementById('autoOffToggle');
@@ -476,7 +484,7 @@
 
         const volBadge = document.createElement('div');
         volBadge.className = 'zone-vol-badge';
-        volBadge.textContent = `${Math.round(((state.volume ?? 0) / maxVol) * 100)}%`;
+        volBadge.textContent = `${Math.round(state.volume ?? 0)}`;
 
         const actions = document.createElement('div');
         actions.className = 'zone-actions';
@@ -564,18 +572,15 @@
       }
 
       const maxVol = zoneCfg.maxVolume ?? 38;
-      volumeRange.max = String(maxVol);
-      volumeRange.value = String(state.volume ?? 0);
       volumeValue.textContent = String(state.volume ?? 0);
-      volumeFill.style.width = `${((state.volume ?? 0) / maxVol) * 100}%`;
       volumeLabel.textContent = state.mute ? 'Volume · Muted' : 'Volume';
 
       bassRange.value = String(state.bass ?? 0);
-      bassValue.textContent = `${Math.round(((state.bass ?? 0) / 14) * 100)}%`;
+      bassValue.textContent = `${Math.round(state.bass ?? 0)}`;
       bassFill.style.width = `${((state.bass ?? 0) / 14) * 100}%`;
 
       trebleRange.value = String(state.treble ?? 0);
-      trebleValue.textContent = `${Math.round(((state.treble ?? 0) / 14) * 100)}%`;
+      trebleValue.textContent = `${Math.round(state.treble ?? 0)}`;
       trebleFill.style.width = `${((state.treble ?? 0) / 14) * 100}%`;
 
       balanceRange.value = String(state.balance ?? 10);
@@ -586,14 +591,16 @@
       buildTimerOptions(autoOffTimer, zoneKey);
     }
 
-    volumeRange.addEventListener('input', () => {
+    function stepVolume(delta) {
       const zoneKey = activeZone;
       if (!zoneKey) return;
       const zoneCfg = cfg.zones?.[zoneKey] || {};
       const maxVol = zoneCfg.maxVolume ?? 38;
-      const value = parseInt(volumeRange.value, 10) || 0;
+      const current = zoneState[zoneKey]?.volume ?? 0;
+      let value = current + delta;
+      if (value < 0) value = 0;
+      if (value > maxVol) value = maxVol;
       volumeValue.textContent = String(value);
-      volumeFill.style.width = `${(value / maxVol) * 100}%`;
       zoneState[zoneKey] = zoneState[zoneKey] || {};
       zoneState[zoneKey].volume = value;
       if (volumeDebouncers[zoneKey]) clearTimeout(volumeDebouncers[zoneKey]);
@@ -605,10 +612,13 @@
           showError('');
         } catch (err) { showError(`Volume change failed for zone ${zoneKey}.`); console.error(err); }
       }, 260);
-    });
+    }
+
+    volumeDownBtn.addEventListener('click', () => stepVolume(-1));
+    volumeUpBtn.addEventListener('click', () => stepVolume(1));
 
     bassRange.addEventListener('input', () => {
-      bassValue.textContent = `${Math.round((parseInt(bassRange.value, 10) / 14) * 100)}%`;
+      bassValue.textContent = `${parseInt(bassRange.value, 10)}`;
       bassFill.style.width = `${(parseInt(bassRange.value, 10) / 14) * 100}%`;
     });
     bassRange.addEventListener('change', async () => {
@@ -624,7 +634,7 @@
     });
 
     trebleRange.addEventListener('input', () => {
-      trebleValue.textContent = `${Math.round((parseInt(trebleRange.value, 10) / 14) * 100)}%`;
+      trebleValue.textContent = `${parseInt(trebleRange.value, 10)}`;
       trebleFill.style.width = `${(parseInt(trebleRange.value, 10) / 14) * 100}%`;
     });
     trebleRange.addEventListener('change', async () => {
