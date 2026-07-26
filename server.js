@@ -227,8 +227,10 @@ function zonePrefix(zone) {
 }
 
 function parseZoneStatus(raw, zone) {
-  if (!raw || raw[0] !== '>') throw new Error(`invalid status line: ${raw}`);
-  const digits = raw.slice(1).replace(/[^0-9]/g, '');
+  const text = String(raw || '');
+  const match = text.match(/>(\d{22,})/);
+  if (!match) throw new Error(`invalid status line: ${raw}`);
+  const digits = match[1].replace(/[^0-9]/g, '');
   if (digits.length < 22) throw new Error(`status line too short: ${digits}`);
   const fields = [];
   for (let i = 0; i < 11; i += 1) fields.push(digits.slice(i * 2, i * 2 + 2));
