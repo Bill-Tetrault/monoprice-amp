@@ -194,10 +194,9 @@ function queryCommand(cmd) {
     function onData(chunk) {
       buffer += chunk.toString('ascii');
       serialStatus.lastActivityAt = new Date().toISOString();
-      const idx = buffer.indexOf('#');
-      if (idx !== -1) {
+      if (/>\d{22,}/.test(buffer)) {
         if (settleTimer) clearTimeout(settleTimer);
-        settleTimer = setTimeout(() => finish(null, buffer.slice(0, idx)), 200);
+        settleTimer = setTimeout(() => finish(null, buffer), 200);
       }
     }
 
