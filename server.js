@@ -344,7 +344,7 @@ async function getZoneState(zone) {
 
 async function setZonePower(zone, on) {
   const z = validateZone(zone);
-  await writeCommand(`${zonePrefix(z)}PR${on ? '01' : '00'}`);
+  await writeCommand(`<${zonePrefix(z)}PR${on ? '01' : '00'}`);
   if (on) scheduleAutoOff(z);
   else cancelAutoOff(z);
   return { zone: z, power: !!on };
@@ -353,7 +353,7 @@ async function setZonePower(zone, on) {
 async function setZoneSource(zone, src) {
   const z = validateZone(zone);
   const s = validateSource(src);
-  await writeCommand(`${zonePrefix(z)}CH${String(s).padStart(2, '0')}`);
+  await writeCommand(`<${zonePrefix(z)}CH${String(s).padStart(2, '0')}`);
   scheduleAutoOff(z);
   return { zone: z, source: s };
 }
@@ -361,14 +361,14 @@ async function setZoneSource(zone, src) {
 async function setZoneVolume(zone, vol) {
   const z = validateZone(zone);
   const v = clampVolume(z, vol);
-  await writeCommand(`${zonePrefix(z)}VO${String(v).padStart(2, '0')}`);
+  await writeCommand(`<${zonePrefix(z)}VO${String(v).padStart(2, '0')}`);
   scheduleAutoOff(z);
   return { zone: z, volume: v };
 }
 
 async function setZoneMute(zone, mute) {
   const z = validateZone(zone);
-  await writeCommand(`${zonePrefix(z)}MU${mute ? '01' : '00'}`);
+  await writeCommand(`<${zonePrefix(z)}MU${mute ? '01' : '00'}`);
   scheduleAutoOff(z);
   return { zone: z, mute: !!mute };
 }
@@ -376,7 +376,7 @@ async function setZoneMute(zone, mute) {
 async function setZoneTreble(zone, treble) {
   const z = validateZone(zone);
   const t = clampTone(treble);
-  await writeCommand(`${zonePrefix(z)}TR${String(t).padStart(2, '0')}`);
+  await writeCommand(`<${zonePrefix(z)}TR${String(t).padStart(2, '0')}`);
   scheduleAutoOff(z);
   return { zone: z, treble: t };
 }
@@ -384,7 +384,7 @@ async function setZoneTreble(zone, treble) {
 async function setZoneBass(zone, bass) {
   const z = validateZone(zone);
   const b = clampTone(bass);
-  await writeCommand(`${zonePrefix(z)}BS${String(b).padStart(2, '0')}`);
+  await writeCommand(`<${zonePrefix(z)}BS${String(b).padStart(2, '0')}`);
   scheduleAutoOff(z);
   return { zone: z, bass: b };
 }
@@ -392,7 +392,7 @@ async function setZoneBass(zone, bass) {
 async function setZoneBalance(zone, balance) {
   const z = validateZone(zone);
   const b = clampBalance(balance);
-  await writeCommand(`${zonePrefix(z)}BL${String(b).padStart(2, '0')}`);
+  await writeCommand(`<${zonePrefix(z)}BL${String(b).padStart(2, '0')}`);
   scheduleAutoOff(z);
   return { zone: z, balance: b };
 }
