@@ -311,10 +311,26 @@ function getAutoOffSettings(zone) {
 
 function cancelAutoOff(zone) {
   const key = String(zone);
-  if (autoOffTimers[key]) {
-    clearTimeout(autoOffTimers[key]);
-    autoOffTimers[key] = null;
+  const current = autoOffTimers[key];
+  if (current && current.timeout) {
+    clearTimeout(current.timeout);
   }
+  autoOffTimers[key] = null;
+}
+
+function getAutoOffStatus(zone) {
+  const key = String(zone);
+  const timer = autoOffTimers[key];
+  const settings = getAutoOffSettings(zone);
+  const remainingMs = timer && timer.expiresAt ? Math.max(0, timer.expiresAt - Date.now()) : 0;
+  return {
+    zone: Number(zone),
+    enabled: settings.enabled,
+    minutes: settings.minutes,
+    active: Boolean(timer && timer.timeout && remainingMs > 0),
+    expiresAt: timer && timer.expiresAt ? new Date(timer.expiresAt).toISOString() : null,
+    remainingMs
+  };
 }
 
 function scheduleAutoOff(zone) {
@@ -322,18 +338,18 @@ function scheduleAutoOff(zone) {
   const settings = getAutoOffSettings(zone);
   cancelAutoOff(zone);
   if (!settings.enabled) return;
-  autoOffTimers[key] = setTimeout(async () => {
+  const expiresAt = Date.now() + (settings.minutes * 60 * 1000);
+  const timeout = setTimeout(async () => {
     try {
-      const state = await getZoneState(zone);
-      if (state.power) {
-        await setZonePower(zone, false);
-      }
+      await writeCommand(`<${zonePrefix(zone)}PR00`);
+      console.log(`[autooff] zone ${zone} turned off after ${settings.minutes} minute(s)`);
     } catch (err) {
       console.error(`[autooff] zone ${zone} failed:`, err.message);
     } finally {
       autoOffTimers[key] = null;
     }
   }, settings.minutes * 60 * 1000);
+  autoOffTimers[key] = { timeout, expiresAt };
 }
 
 async function getZoneState(zone) {
@@ -412,6 +428,14 @@ app.get('/api/serial-status', (_req, res) => {
   });
 });
 
+app.get('/api/timers', (_req, res) => {
+  const zones = {};
+  for (let z = 1; z <= 6; z += 1) {
+    zones[String(z)] = getAutoOffStatus(z);
+  }
+  res.json({ now: new Date().toISOString(), zones });
+});
+
 app.get('/api/state', async (req, res) => {
   try {
     const { zone } = req.query;
@@ -427,7 +451,7 @@ app.post('/api/zone/:zone/power', async (req, res) => {
   try {
     if (typeof req.body.on !== 'boolean') return res.status(400).json({ error: 'on must be true or false' });
     const result = await setZonePower(req.params.zone, req.body.on);
-    res.json({ ok: true, ...result });
+    res.json({ ok: true, ...result, timer: getAutoOffStatus(req.params.zone) });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message || 'internal error' });
   }
@@ -436,7 +460,7 @@ app.post('/api/zone/:zone/power', async (req, res) => {
 app.post('/api/zone/:zone/source', async (req, res) => {
   try {
     const result = await setZoneSource(req.params.zone, req.body.source);
-    res.json({ ok: true, ...result });
+    res.json({ ok: true, ...result, timer: getAutoOffStatus(req.params.zone) });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message || 'internal error' });
   }
@@ -445,7 +469,7 @@ app.post('/api/zone/:zone/source', async (req, res) => {
 app.post('/api/zone/:zone/volume', async (req, res) => {
   try {
     const result = await setZoneVolume(req.params.zone, req.body.volume);
-    res.json({ ok: true, ...result });
+    res.json({ ok: true, ...result, timer: getAutoOffStatus(req.params.zone) });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message || 'internal error' });
   }
@@ -455,7 +479,7 @@ app.post('/api/zone/:zone/mute', async (req, res) => {
   try {
     if (typeof req.body.mute !== 'boolean') return res.status(400).json({ error: 'mute must be true or false' });
     const result = await setZoneMute(req.params.zone, req.body.mute);
-    res.json({ ok: true, ...result });
+    res.json({ ok: true, ...result, timer: getAutoOffStatus(req.params.zone) });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message || 'internal error' });
   }
@@ -464,7 +488,7 @@ app.post('/api/zone/:zone/mute', async (req, res) => {
 app.post('/api/zone/:zone/treble', async (req, res) => {
   try {
     const result = await setZoneTreble(req.params.zone, req.body.treble);
-    res.json({ ok: true, ...result });
+    res.json({ ok: true, ...result, timer: getAutoOffStatus(req.params.zone) });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message || 'internal error' });
   }
@@ -473,7 +497,7 @@ app.post('/api/zone/:zone/treble', async (req, res) => {
 app.post('/api/zone/:zone/bass', async (req, res) => {
   try {
     const result = await setZoneBass(req.params.zone, req.body.bass);
-    res.json({ ok: true, ...result });
+    res.json({ ok: true, ...result, timer: getAutoOffStatus(req.params.zone) });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message || 'internal error' });
   }
@@ -482,7 +506,7 @@ app.post('/api/zone/:zone/bass', async (req, res) => {
 app.post('/api/zone/:zone/balance', async (req, res) => {
   try {
     const result = await setZoneBalance(req.params.zone, req.body.balance);
-    res.json({ ok: true, ...result });
+    res.json({ ok: true, ...result, timer: getAutoOffStatus(req.params.zone) });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message || 'internal error' });
   }
@@ -558,6 +582,18 @@ function handleConfigPatch(req, res) {
 
     config = deepMerge(config, body);
     writeConfig(config);
+
+    if (body.automation && body.automation.zones) {
+      for (const zoneKey of Object.keys(body.automation.zones)) {
+        const state = getAutoOffStatus(zoneKey);
+        if (state.active || state.enabled) {
+          scheduleAutoOff(Number(zoneKey));
+        } else {
+          cancelAutoOff(zoneKey);
+        }
+      }
+    }
+
     res.json(config);
   } catch (err) {
     res.status(500).json({ error: err.message || 'internal error' });

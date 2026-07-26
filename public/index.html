@@ -37,19 +37,10 @@
   }
   *,*::before,*::after{box-sizing:border-box;}
   html,body{margin:0;height:100%;}
-  body{
-    font-family:var(--font);
-    background:var(--bg);
-    color:var(--text);
-    min-height:100vh;
-    -webkit-font-smoothing:antialiased;
-  }
+  body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
   button,input,select{font:inherit;color:inherit;}
   button{cursor:pointer;background:none;border:none;}
-  input[type=range]{
-    -webkit-appearance:none;-moz-appearance:none;appearance:none;
-    background:transparent;width:100%;height:100%;margin:0;display:block;
-  }
+  input[type=range]{-webkit-appearance:none;-moz-appearance:none;appearance:none;background:transparent;width:100%;height:100%;margin:0;display:block;}
   input[type=range]::-webkit-slider-runnable-track{-webkit-appearance:none;background:transparent;border:none;height:100%;}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:0;height:0;background:transparent;border:none;box-shadow:none;}
   input[type=range]::-moz-range-track{background:transparent;border:none;height:100%;}
@@ -57,83 +48,45 @@
   input[type=range]::-moz-range-progress{background:transparent;}
   input[type=range]:focus{outline:none;}
   :focus-visible{outline:2px solid var(--purple-soft);outline-offset:2px;border-radius:6px;}
-
   .shell{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-bottom:5.5rem;}
-
   .statusbar{display:flex;justify-content:space-between;align-items:center;padding:0.6rem var(--space-5) 0;font-size:0.8rem;color:var(--text-muted);}
-
   .topbar{display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-5) var(--space-4);}
   .topbar-title{font-size:0.78rem;font-weight:700;letter-spacing:0.14em;color:var(--text-muted);text-transform:uppercase;}
   .back-btn,.icon-btn{width:2.4rem;height:2.4rem;display:grid;place-items:center;border-radius:var(--radius-full);color:var(--text);flex:0 0 auto;}
   .icon-btn{color:var(--text-muted);}
   .icon-btn:active,.back-btn:active{background:var(--bg-elev-2);}
-
   .banner{margin:0 var(--space-5) var(--space-3);padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);font-size:0.85rem;display:none;}
   .banner.show{display:block;}
   .banner.warn{background:var(--warn-bg);border:1px solid var(--warn-border);color:var(--warn-text);}
   .banner.err{background:var(--err-bg);border:1px solid var(--err-border);color:var(--err-text);}
-
   .view{display:none;flex-direction:column;flex:1;}
   .view.active{display:flex;}
-
   .zone-list{display:flex;flex-direction:column;gap:0.65rem;padding:0 var(--space-5);}
-
-  .zone-row{
-    background:var(--bg-elev);
-    border:1px solid var(--border);
-    border-radius:var(--radius-lg);
-    display:flex;
-    align-items:center;
-    gap:var(--space-3);
-    padding:var(--space-3);
-    min-height:64px;
-    transition:background var(--transition), border-color var(--transition);
-  }
+  .zone-row{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-lg);display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);min-height:64px;transition:background var(--transition), border-color var(--transition);}
   .zone-row.is-on{background:linear-gradient(135deg, var(--purple-strong), var(--purple));border-color:transparent;box-shadow:0 8px 22px var(--purple-glow);}
-
   .zone-row-main-btn{display:flex;flex-direction:column;text-align:left;flex:1;min-width:0;gap:0.15rem;padding:0.2rem 0;}
   .zone-name{font-size:1.05rem;font-weight:700;line-height:1.2;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .zone-row.is-on .zone-name{color:#fff;}
   .zone-sub{font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;}
   .zone-row.is-on .zone-sub{color:rgba(255,255,255,0.78);}
-
   .zone-vol-badge{flex:0 0 auto;font-size:0.78rem;font-weight:700;color:rgba(255,255,255,0.85);display:none;}
   .zone-row.is-on .zone-vol-badge{display:block;}
-
   .zone-actions{display:flex;align-items:center;gap:0.5rem;flex:0 0 auto;}
-  .power-btn,.chart-btn{
-    width:2.5rem;height:2.5rem;border-radius:0.8rem;display:grid;place-items:center;
-    background:rgba(255,255,255,0.05);color:var(--text-muted);flex:0 0 auto;font-size:1rem;
-    line-height:0;
-  }
+  .power-btn,.chart-btn{width:2.5rem;height:2.5rem;border-radius:0.8rem;display:grid;place-items:center;background:rgba(255,255,255,0.05);color:var(--text-muted);flex:0 0 auto;font-size:1rem;line-height:0;}
   .power-btn svg,.chart-btn svg{width:1.15rem;height:1.15rem;display:block;stroke:currentColor;fill:none;}
   .icon-btn svg,.back-btn svg{width:1.2rem;height:1.2rem;display:block;stroke:currentColor;fill:none;}
   .icon-btn,.back-btn{line-height:0;}
   .zone-row.is-on .power-btn,.zone-row.is-on .chart-btn{background:rgba(0,0,0,0.22);color:#fff;}
   .power-btn.on{color:var(--purple-soft);}
   .zone-row.is-on .power-btn.on{color:#fff;}
-
   .allbar{padding:var(--space-4) var(--space-5) 0;display:flex;justify-content:flex-end;}
   .all-off-btn{background:var(--bg-elev);border:1px solid var(--border);color:var(--text-muted);padding:0.55rem 1rem;border-radius:var(--radius-md);font-size:0.8rem;font-weight:700;letter-spacing:0.04em;}
-
-  .detail-hero{
-    background:linear-gradient(135deg, var(--purple-strong), var(--purple));
-    margin:0 var(--space-5);
-    border-radius:var(--radius-lg);
-    padding:var(--space-4) var(--space-4) var(--space-5);
-    display:flex;flex-direction:column;gap:var(--space-4);
-  }
+  .detail-hero{background:linear-gradient(135deg, var(--purple-strong), var(--purple));margin:0 var(--space-5);border-radius:var(--radius-lg);padding:var(--space-4) var(--space-4) var(--space-5);display:flex;flex-direction:column;gap:var(--space-4);}
   .detail-title{font-size:1.9rem;font-weight:800;color:#fff;margin:0.2rem 0 0;}
   .detail-topbar{display:flex;align-items:center;justify-content:space-between;}
   .detail-topbar .back-btn{color:#fff;}
   .detail-topbar .icon-btn{color:rgba(255,255,255,0.78);}
-
-  .tone-card{
-    background:rgba(0,0,0,0.22);
-    border-radius:var(--radius-lg);
-    padding:var(--space-4);
-    display:flex;flex-direction:column;gap:var(--space-4);
-  }
+  .tone-card{background:rgba(0,0,0,0.22);border-radius:var(--radius-lg);padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-4);}
   .tone-row{display:flex;flex-direction:column;gap:0.5rem;}
   .tone-row-head{display:flex;align-items:center;justify-content:space-between;}
   .tone-label{font-size:0.9rem;font-weight:600;color:rgba(255,255,255,0.92);}
@@ -141,25 +94,16 @@
   .tone-track{position:relative;height:34px;border-radius:0.6rem;background:rgba(0,0,0,0.3);overflow:hidden;}
   .tone-fill{position:absolute;top:0;left:0;bottom:0;background:rgba(255,255,255,0.3);border-radius:0.6rem 0 0 0.6rem;pointer-events:none;}
   .tone-track input[type=range]{position:absolute;inset:0;width:100%;height:100%;margin:0;cursor:pointer;opacity:0;}
-
   .balance-row{display:flex;align-items:center;gap:var(--space-3);}
   .balance-track{flex:1;height:34px;border-radius:0.6rem;background:rgba(0,0,0,0.3);position:relative;overflow:hidden;}
   .balance-track input[type=range]{position:absolute;inset:0;width:100%;height:100%;margin:0;cursor:pointer;opacity:0;}
   .balance-fill{position:absolute;top:0.3rem;bottom:0.3rem;width:3px;background:#fff;border-radius:2px;}
   .balance-lr{font-size:0.85rem;font-weight:700;color:rgba(255,255,255,0.82);flex:0 0 auto;}
-
   .section-body{padding:var(--space-5) var(--space-5) var(--space-6);display:flex;flex-direction:column;gap:var(--space-5);}
-
   .source-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0.7rem;}
-  .source-tile{
-    background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-lg);
-    padding:var(--space-4);min-height:78px;display:flex;align-items:center;justify-content:center;
-    font-size:1rem;font-weight:600;color:var(--text);text-align:center;transition:background var(--transition),border-color var(--transition);
-  }
+  .source-tile{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-4);min-height:78px;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:600;color:var(--text);text-align:center;transition:background var(--transition),border-color var(--transition);}
   .source-tile.selected{background:var(--purple);color:#fff;border-color:transparent;font-weight:700;box-shadow:0 6px 18px var(--purple-glow);}
-
   .section-label{font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.6rem;}
-
   .volume-card{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-4);}
   .volume-card .tone-track{background:var(--bg-elev-2);}
   .volume-card .tone-fill{background:var(--purple);}
@@ -171,7 +115,6 @@
   .volume-stepper-btn:active{background:var(--purple-strong);}
   .volume-stepper-divider{width:1px;height:100%;background:rgba(0,0,0,0.25);flex:0 0 auto;}
   .volume-stepper-btn svg{width:1.2rem;height:1.2rem;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;}
-
   .autooff-card{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-4);}
   .autooff-top{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);}
   .autooff-copy .t{font-size:0.95rem;font-weight:600;}
@@ -182,28 +125,19 @@
   .toggle.on .toggle-thumb{transform:translateX(1.25rem);}
   .timer-row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);}
   .timer-select{background:var(--bg-elev-2);border:1px solid var(--border);border-radius:0.7rem;padding:0.55rem 0.8rem;color:var(--text);min-height:40px;}
-
+  .countdown-pill{display:inline-flex;align-items:center;gap:0.45rem;background:var(--bg-elev-2);border:1px solid var(--border);border-radius:var(--radius-full);padding:0.55rem 0.85rem;font-size:0.82rem;color:var(--text);font-variant-numeric:tabular-nums;}
+  .countdown-pill.is-idle{color:var(--text-muted);}
   .settings-list{display:flex;flex-direction:column;gap:0.6rem;padding:0 var(--space-5);}
   .settings-row{display:flex;align-items:center;gap:var(--space-3);background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius-md);padding:0.2rem var(--space-3);}
   .settings-input{flex:1;background:transparent;border:none;padding:0.85rem 0.2rem;color:var(--text);font-size:1rem;min-width:0;}
   .settings-icon-btn{width:2.1rem;height:2.1rem;display:grid;place-items:center;color:var(--text-faint);flex:0 0 auto;}
   .add-zone-fab{align-self:flex-end;width:2.6rem;height:2.6rem;border-radius:50%;background:var(--purple);color:#fff;display:grid;place-items:center;font-size:1.4rem;font-weight:700;margin:0.4rem var(--space-5) 0;box-shadow:0 6px 18px var(--purple-glow);}
-
   .app-title-row{padding:0 var(--space-5) var(--space-3);}
-
-  .tabbar{
-    position:fixed;left:0;right:0;bottom:0;
-    max-width:480px;margin:0 auto;
-    background:rgba(18,16,23,0.92);backdrop-filter:blur(14px);
-    border-top:1px solid var(--border);
-    display:flex;justify-content:space-around;align-items:center;
-    padding:0.5rem var(--space-3) calc(0.5rem + env(safe-area-inset-bottom));
-  }
+  .tabbar{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;background:rgba(18,16,23,0.92);backdrop-filter:blur(14px);border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center;padding:0.5rem var(--space-3) calc(0.5rem + env(safe-area-inset-bottom));}
   .tab-btn{display:flex;flex-direction:column;align-items:center;gap:0.25rem;color:var(--text-faint);flex:1;padding:0.3rem 0;min-height:44px;}
   .tab-btn svg{width:1.3rem;height:1.3rem;stroke:currentColor;fill:none;}
   .tab-btn.active{color:var(--purple-soft);}
   .tab-btn span{font-size:0.68rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;}
-
   .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:flex-end;justify-content:center;z-index:200;}
   .modal-backdrop.open{display:flex;}
   .sheet{width:100%;max-width:480px;background:var(--bg-elev);border-radius:1.3rem 1.3rem 0 0;padding:var(--space-5);max-height:80vh;overflow:auto;display:flex;flex-direction:column;gap:var(--space-3);}
@@ -212,7 +146,6 @@
   .sheet-field label{font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;}
   .sheet-input{background:var(--bg-elev-2);border:1px solid var(--border);border-radius:0.75rem;padding:0.8rem 0.9rem;color:var(--text);}
   .sheet-save{margin-top:var(--space-2);background:var(--purple);color:#fff;font-weight:700;border-radius:var(--radius-md);padding:0.85rem;text-align:center;}
-
   @media (prefers-reduced-motion: reduce){*,*::before,*::after{transition-duration:0.01ms !important;}}
 </style>
 </head>
@@ -221,8 +154,6 @@
     <div class="statusbar"><span id="clock">--:--</span><span>Monoprice 10761</span></div>
     <div class="banner warn" id="serialBanner"></div>
     <div class="banner err" id="errorBanner"></div>
-
-    <!-- LIST VIEW -->
     <section class="view active" id="viewList">
       <div class="topbar">
         <div class="topbar-title" id="listTitle">WHOLE-HOME AUDIO</div>
@@ -231,8 +162,6 @@
       <div class="zone-list" id="zoneList"></div>
       <div class="allbar"><button class="all-off-btn" id="allOffBtn">ALL OFF</button></div>
     </section>
-
-    <!-- DETAIL VIEW -->
     <section class="view" id="viewDetail">
       <div style="padding:var(--space-3) var(--space-5) 0;">
         <div class="detail-topbar">
@@ -245,38 +174,23 @@
         <div class="tone-card">
           <div class="tone-row">
             <div class="tone-row-head"><span class="tone-label">Bass</span><span class="tone-value" id="bassValue">0%</span></div>
-            <div class="tone-track">
-              <div class="tone-fill" id="bassFill"></div>
-              <input type="range" min="0" max="14" id="bassRange">
-            </div>
+            <div class="tone-track"><div class="tone-fill" id="bassFill"></div><input type="range" min="0" max="14" id="bassRange"></div>
           </div>
           <div class="tone-row">
             <div class="tone-row-head"><span class="tone-label">Treble</span><span class="tone-value" id="trebleValue">0%</span></div>
-            <div class="tone-track">
-              <div class="tone-fill" id="trebleFill"></div>
-              <input type="range" min="0" max="14" id="trebleRange">
-            </div>
+            <div class="tone-track"><div class="tone-fill" id="trebleFill"></div><input type="range" min="0" max="14" id="trebleRange"></div>
           </div>
           <div class="tone-row">
             <div class="tone-row-head"><span class="tone-label">Balance</span><span class="tone-value" id="balanceValueLabel">Center</span></div>
-            <div class="balance-row">
-              <span class="balance-lr">L</span>
-              <div class="balance-track">
-                <div class="balance-fill" id="balanceFill"></div>
-                <input type="range" min="0" max="20" id="balanceRange">
-              </div>
-              <span class="balance-lr">R</span>
-            </div>
+            <div class="balance-row"><span class="balance-lr">L</span><div class="balance-track"><div class="balance-fill" id="balanceFill"></div><input type="range" min="0" max="20" id="balanceRange"></div><span class="balance-lr">R</span></div>
           </div>
         </div>
       </div>
-
       <div class="section-body">
         <div>
           <div class="section-label">Source</div>
           <div class="source-grid" id="sourceGrid"></div>
         </div>
-
         <div>
           <div class="section-label">Volume</div>
           <div class="volume-card">
@@ -290,7 +204,6 @@
             </div>
           </div>
         </div>
-
         <div>
           <div class="section-label">Auto-off</div>
           <div class="autooff-card">
@@ -305,61 +218,47 @@
               <span class="tone-label" style="color:var(--text-muted);">Turn off after</span>
               <select class="timer-select" id="autoOffTimer"></select>
             </div>
+            <div class="timer-row">
+              <span class="tone-label" style="color:var(--text-muted);">Countdown</span>
+              <span class="countdown-pill is-idle" id="autoOffCountdown">Inactive</span>
+            </div>
           </div>
         </div>
       </div>
     </section>
-
-    <!-- SETTINGS VIEW -->
     <section class="view" id="viewSettings">
       <div class="topbar">
         <button class="back-btn" id="settingsBack" aria-label="Back to zones"><svg viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></button>
         <div class="topbar-title">SETTINGS</div>
         <span style="width:2.4rem;"></span>
       </div>
-      <div class="app-title-row">
-        <div class="settings-row">
-          <input class="settings-input" id="appTitleInput" placeholder="App title" maxlength="80">
-        </div>
-      </div>
+      <div class="app-title-row"><div class="settings-row"><input class="settings-input" id="appTitleInput" placeholder="App title" maxlength="80"></div></div>
       <div class="section-label" style="padding:0 var(--space-5);">Zones</div>
       <div class="settings-list" id="settingsZoneList"></div>
       <button class="add-zone-fab" id="editSourcesFab" title="Edit source names" aria-label="Edit source names"><svg viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:1.3rem;height:1.3rem;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button>
     </section>
-
     <div class="tabbar">
       <button class="tab-btn" id="tabServer"><span><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><circle cx="7" cy="6.5" r="0.6" fill="currentColor" stroke="none"/></svg></span><span>Settings</span></button>
       <button class="tab-btn active" id="tabZones"><span><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span>Zones</span></button>
       <button class="tab-btn" id="tabSources"><span><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="7" rx="1"/><rect x="14" y="4" width="7" height="7" rx="1"/><rect x="3" y="15" width="7" height="5" rx="1"/><rect x="14" y="15" width="7" height="5" rx="1"/></svg></span><span>Sources</span></button>
     </div>
   </div>
-
-  <div class="modal-backdrop" id="sourcesModalBackdrop">
-    <div class="sheet">
-      <div class="sheet-handle"></div>
-      <strong>Source names</strong>
-      <div id="sourcesForm" style="display:flex;flex-direction:column;gap:0.6rem;"></div>
-      <div class="sheet-save" id="sourcesSave">Save</div>
-    </div>
-  </div>
-
+  <div class="modal-backdrop" id="sourcesModalBackdrop"><div class="sheet"><div class="sheet-handle"></div><strong>Source names</strong><div id="sourcesForm" style="display:flex;flex-direction:column;gap:0.6rem;"></div><div class="sheet-save" id="sourcesSave">Save</div></div></div>
   <script>
     let cfg = null;
     const zoneState = {};
+    const timerState = {};
     const volumeDebouncers = {};
     let activeZone = null;
     const timerChoices = [30, 60, 90, 120, 180, 240];
-
     const zoneList = document.getElementById('zoneList');
     const listTitle = document.getElementById('listTitle');
     const serialBanner = document.getElementById('serialBanner');
     const errorBanner = document.getElementById('errorBanner');
     const clockEl = document.getElementById('clock');
-
     const viewList = document.getElementById('viewList');
     const viewDetail = document.getElementById('viewDetail');
     const viewSettings = document.getElementById('viewSettings');
-
     const detailName = document.getElementById('detailName');
     const sourceGrid = document.getElementById('sourceGrid');
     const bassRange = document.getElementById('bassRange');
@@ -377,440 +276,86 @@
     const volumeLabel = document.getElementById('volumeLabel');
     const autoOffToggle = document.getElementById('autoOffToggle');
     const autoOffTimer = document.getElementById('autoOffTimer');
-
+    const autoOffCountdown = document.getElementById('autoOffCountdown');
     const settingsZoneList = document.getElementById('settingsZoneList');
     const appTitleInput = document.getElementById('appTitleInput');
     const sourcesModalBackdrop = document.getElementById('sourcesModalBackdrop');
     const sourcesForm = document.getElementById('sourcesForm');
-
-    function showError(message) {
-      if (!message) { errorBanner.classList.remove('show'); errorBanner.textContent = ''; return; }
-      errorBanner.classList.add('show'); errorBanner.textContent = message;
-    }
-
-    function switchView(id) {
-      [viewList, viewDetail, viewSettings].forEach(v => v.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
-    }
-
-    function ensureAutomationZone(zoneKey) {
-      if (!cfg.automation) cfg.automation = { enabled: true, defaultMinutes: 120, zones: {} };
-      if (!cfg.automation.zones) cfg.automation.zones = {};
-      if (!cfg.automation.zones[zoneKey]) cfg.automation.zones[zoneKey] = { enabled: false, minutes: cfg.automation.defaultMinutes || 120 };
-      return cfg.automation.zones[zoneKey];
-    }
-
+    function showError(message) { if (!message) { errorBanner.classList.remove('show'); errorBanner.textContent = ''; return; } errorBanner.classList.add('show'); errorBanner.textContent = message; }
+    function switchView(id) { [viewList, viewDetail, viewSettings].forEach(v => v.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+    function ensureAutomationZone(zoneKey) { if (!cfg.automation) cfg.automation = { enabled: true, defaultMinutes: 120, zones: {} }; if (!cfg.automation.zones) cfg.automation.zones = {}; if (!cfg.automation.zones[zoneKey]) cfg.automation.zones[zoneKey] = { enabled: false, minutes: cfg.automation.defaultMinutes || 120 }; return cfg.automation.zones[zoneKey]; }
+    function formatRemaining(ms) { const total = Math.max(0, Math.ceil(ms / 1000)); const hours = Math.floor(total / 3600); const minutes = Math.floor((total % 3600) / 60); const seconds = total % 60; if (hours > 0) return `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`; return `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`; }
+    function renderCountdown(zoneKey) { const timer = timerState[String(zoneKey)] || null; const enabled = !!ensureAutomationZone(String(zoneKey)).enabled; if (!enabled) { autoOffCountdown.textContent = 'Disabled'; autoOffCountdown.className = 'countdown-pill is-idle'; return; } if (!timer || !timer.active || !timer.remainingMs) { autoOffCountdown.textContent = 'Waiting for activity'; autoOffCountdown.className = 'countdown-pill is-idle'; return; } autoOffCountdown.textContent = formatRemaining(timer.remainingMs); autoOffCountdown.className = 'countdown-pill'; }
     async function patchConfig(slice) {
       let res;
-      try {
-        res = await fetch('/api/config', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(slice) });
-      } catch (networkErr) {
-        res = null;
-      }
-      if (!res || res.status === 405 || res.status === 501) {
-        res = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(slice) });
-      }
-      if (!res.ok) {
-        let detail = '';
-        try { const j = await res.json(); detail = j && j.error ? j.error : ''; } catch (_e) { try { detail = await res.text(); } catch (_e2) { detail = ''; } }
-        throw new Error(detail || `Request failed (${res.status})`);
-      }
-      cfg = await res.json();
-      renderList();
-      renderSettings();
-      return cfg;
+      try { res = await fetch('/api/config', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(slice) }); } catch (_e) { res = null; }
+      if (!res || res.status === 405 || res.status === 501) res = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(slice) });
+      if (!res.ok) { let detail = ''; try { const j = await res.json(); detail = j && j.error ? j.error : ''; } catch (_e) { try { detail = await res.text(); } catch (_e2) { detail = ''; } } throw new Error(detail || `Request failed (${res.status})`); }
+      cfg = await res.json(); renderList(); renderSettings(); if (activeZone) renderDetail(activeZone); return cfg;
     }
-
-    async function loadConfig() {
-      const res = await fetch('/api/config');
-      if (!res.ok) throw new Error(await res.text());
-      cfg = await res.json();
-      listTitle.textContent = (cfg.title || 'Whole-Home Audio').toUpperCase();
-      appTitleInput.value = cfg.title || 'Whole-Home Audio';
-      document.title = cfg.title || 'Whole-Home Audio';
-    }
-
-    async function refreshSerialStatus() {
-      try {
-        const res = await fetch('/api/serial-status');
-        if (!res.ok) throw new Error('unavailable');
-        const json = await res.json();
-        if (json.online) { serialBanner.classList.remove('show'); }
-        else { serialBanner.classList.add('show'); serialBanner.textContent = `Serial offline (${json.path || 'unknown'})`; }
-      } catch (_e) {
-        serialBanner.classList.add('show'); serialBanner.textContent = 'Serial status unavailable';
-      }
-    }
-
-    async function loadZoneState(zone) {
-      try {
-        const res = await fetch(`/api/state?zone=${zone}`);
-        if (!res.ok) throw new Error(await res.text());
-        zoneState[String(zone)] = await res.json();
-      } catch (err) { console.error('State load failed', zone, err); }
-      renderList();
-      if (activeZone === String(zone)) renderDetail(activeZone);
-    }
-
-    async function loadAllZoneStateStaggered() {
-      for (let z = 1; z <= 6; z += 1) setTimeout(() => loadZoneState(z), (z - 1) * 160);
-    }
-
+    async function loadConfig() { const res = await fetch('/api/config'); if (!res.ok) throw new Error(await res.text()); cfg = await res.json(); listTitle.textContent = (cfg.title || 'Whole-Home Audio').toUpperCase(); appTitleInput.value = cfg.title || 'Whole-Home Audio'; document.title = cfg.title || 'Whole-Home Audio'; }
+    async function refreshTimers() { try { const res = await fetch('/api/timers'); if (!res.ok) throw new Error(await res.text()); const json = await res.json(); Object.assign(timerState, json.zones || {}); if (activeZone) renderCountdown(activeZone); } catch (err) { console.error('Timer refresh failed', err); } }
+    async function refreshSerialStatus() { try { const res = await fetch('/api/serial-status'); if (!res.ok) throw new Error('unavailable'); const json = await res.json(); if (json.online) { serialBanner.classList.remove('show'); } else { serialBanner.classList.add('show'); serialBanner.textContent = `Serial offline (${json.path || 'unknown'})`; } } catch (_e) { serialBanner.classList.add('show'); serialBanner.textContent = 'Serial status unavailable'; } }
+    async function loadZoneState(zone) { try { const res = await fetch(`/api/state?zone=${zone}`); if (!res.ok) throw new Error(await res.text()); zoneState[String(zone)] = await res.json(); } catch (err) { console.error('State load failed', zone, err); } renderList(); if (activeZone === String(zone)) renderDetail(activeZone); }
+    async function loadAllZoneStateStaggered() { for (let z = 1; z <= 6; z += 1) setTimeout(() => loadZoneState(z), (z - 1) * 160); }
     function renderList() {
-      if (!cfg) return;
-      zoneList.innerHTML = '';
+      if (!cfg) return; zoneList.innerHTML = '';
       for (let z = 1; z <= 6; z += 1) {
-        const zoneKey = String(z);
-        const zoneCfg = cfg.zones?.[zoneKey] || {};
-        const state = zoneState[zoneKey] || { power: false, source: 1, volume: 0 };
-        const sourceName = cfg.sourceNames?.[String(state.source)] || `Source ${state.source}`;
-        const maxVol = zoneCfg.maxVolume ?? 38;
-
-        const row = document.createElement('div');
-        row.className = `zone-row ${state.power ? 'is-on' : ''}`;
-        row.dataset.zone = zoneKey;
-
-        const mainBtn = document.createElement('button');
-        mainBtn.type = 'button';
-        mainBtn.className = 'zone-row-main-btn';
-        mainBtn.addEventListener('click', () => openDetail(zoneKey));
-        const nameEl = document.createElement('div');
-        nameEl.className = 'zone-name';
-        nameEl.textContent = zoneCfg.name || `Zone ${zoneKey}`;
-        const subEl = document.createElement('div');
-        subEl.className = 'zone-sub';
-        subEl.textContent = state.power ? sourceName : 'Off';
+        const zoneKey = String(z); const zoneCfg = cfg.zones?.[zoneKey] || {}; const state = zoneState[zoneKey] || { power: false, source: 1, volume: 0 }; const sourceName = cfg.sourceNames?.[String(state.source)] || `Source ${state.source}`;
+        const row = document.createElement('div'); row.className = `zone-row ${state.power ? 'is-on' : ''}`; row.dataset.zone = zoneKey;
+        const mainBtn = document.createElement('button'); mainBtn.type = 'button'; mainBtn.className = 'zone-row-main-btn'; mainBtn.addEventListener('click', () => openDetail(zoneKey));
+        const nameEl = document.createElement('div'); nameEl.className = 'zone-name'; nameEl.textContent = zoneCfg.name || `Zone ${zoneKey}`;
+        const subEl = document.createElement('div'); subEl.className = 'zone-sub'; const timer = timerState[zoneKey]; subEl.textContent = state.power ? (timer && timer.active ? `${sourceName} · ${formatRemaining(timer.remainingMs)}` : sourceName) : 'Off';
         mainBtn.append(nameEl, subEl);
-
-        const volBadge = document.createElement('div');
-        volBadge.className = 'zone-vol-badge';
-        volBadge.textContent = `${Math.round(state.volume ?? 0)}`;
-
-        const actions = document.createElement('div');
-        actions.className = 'zone-actions';
-        const powerBtn = document.createElement('button');
-        powerBtn.type = 'button';
-        powerBtn.className = `power-btn ${state.power ? 'on' : ''}`;
-        powerBtn.setAttribute('aria-label', `${state.power ? 'Turn off' : 'Turn on'} ${zoneCfg.name || zoneKey}`);
-        powerBtn.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v9"/><path d="M18.36 6.64a9 9 0 1 1-12.72 0"/></svg>';
-        powerBtn.addEventListener('click', async (ev) => {
-          ev.stopPropagation();
-          try {
-            const next = !Boolean(zoneState[zoneKey]?.power);
-            const res = await fetch(`/api/zone/${zoneKey}/power`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: next }) });
-            if (!res.ok) throw new Error(await res.text());
-            zoneState[zoneKey] = zoneState[zoneKey] || {};
-            zoneState[zoneKey].power = next;
-            renderList();
-            showError('');
-          } catch (err) { showError(`Power command failed for zone ${zoneKey}.`); console.error(err); }
-        });
-
-        const chartBtn = document.createElement('button');
-        chartBtn.type = 'button';
-        chartBtn.className = 'chart-btn';
-        chartBtn.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
-        chartBtn.setAttribute('aria-label', `Open ${zoneCfg.name || zoneKey} details`);
-        chartBtn.addEventListener('click', (ev) => { ev.stopPropagation(); openDetail(zoneKey); });
-
-        actions.append(powerBtn, chartBtn);
-        row.append(mainBtn, volBadge, actions);
-        zoneList.appendChild(row);
+        const volBadge = document.createElement('div'); volBadge.className = 'zone-vol-badge'; volBadge.textContent = `${Math.round(state.volume ?? 0)}`;
+        const actions = document.createElement('div'); actions.className = 'zone-actions';
+        const powerBtn = document.createElement('button'); powerBtn.type = 'button'; powerBtn.className = `power-btn ${state.power ? 'on' : ''}`; powerBtn.setAttribute('aria-label', `${state.power ? 'Turn off' : 'Turn on'} ${zoneCfg.name || zoneKey}`); powerBtn.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v9"/><path d="M18.36 6.64a9 9 0 1 1-12.72 0"/></svg>';
+        powerBtn.addEventListener('click', async (ev) => { ev.stopPropagation(); try { const next = !Boolean(zoneState[zoneKey]?.power); const res = await fetch(`/api/zone/${zoneKey}/power`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: next }) }); if (!res.ok) throw new Error(await res.text()); const json = await res.json(); zoneState[zoneKey] = zoneState[zoneKey] || {}; zoneState[zoneKey].power = next; if (json.timer) timerState[zoneKey] = json.timer; renderList(); if (activeZone === zoneKey) renderDetail(zoneKey); showError(''); } catch (err) { showError(`Power command failed for zone ${zoneKey}.`); console.error(err); } });
+        const chartBtn = document.createElement('button'); chartBtn.type = 'button'; chartBtn.className = 'chart-btn'; chartBtn.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>'; chartBtn.setAttribute('aria-label', `Open ${zoneCfg.name || zoneKey} details`); chartBtn.addEventListener('click', (ev) => { ev.stopPropagation(); openDetail(zoneKey); });
+        actions.append(powerBtn, chartBtn); row.append(mainBtn, volBadge, actions); zoneList.appendChild(row);
       }
     }
-
-    function buildTimerOptions(select, zoneKey) {
-      select.innerHTML = '';
-      const automation = ensureAutomationZone(zoneKey);
-      timerChoices.forEach((minutes) => {
-        const option = document.createElement('option');
-        option.value = String(minutes);
-        option.textContent = `${minutes} min`;
-        if (Number(automation.minutes) === minutes) option.selected = true;
-        select.appendChild(option);
-      });
-    }
-
-    function openDetail(zoneKey) {
-      activeZone = zoneKey;
-      renderDetail(zoneKey);
-      switchView('viewDetail');
-    }
-
-    function balanceLabel(v) {
-      if (v < 8) return 'Left';
-      if (v > 12) return 'Right';
-      return 'Center';
-    }
-
+    function buildTimerOptions(select, zoneKey) { select.innerHTML = ''; const automation = ensureAutomationZone(zoneKey); timerChoices.forEach((minutes) => { const option = document.createElement('option'); option.value = String(minutes); option.textContent = `${minutes} min`; if (Number(automation.minutes) === minutes) option.selected = true; select.appendChild(option); }); }
+    function openDetail(zoneKey) { activeZone = zoneKey; renderDetail(zoneKey); switchView('viewDetail'); }
+    function balanceLabel(v) { if (v < 8) return 'Left'; if (v > 12) return 'Right'; return 'Center'; }
     function renderDetail(zoneKey) {
-      if (!cfg) return;
-      const zoneCfg = cfg.zones?.[zoneKey] || {};
-      const state = zoneState[zoneKey] || { power: false, source: 1, volume: 0, bass: 0, treble: 0, balance: 10, mute: false };
-      const automation = ensureAutomationZone(zoneKey);
-
-      detailName.textContent = zoneCfg.name || `Zone ${zoneKey}`;
-
-      sourceGrid.innerHTML = '';
-      for (let s = 1; s <= 6; s += 1) {
-        const tile = document.createElement('button');
-        tile.type = 'button';
-        tile.className = `source-tile ${Number(state.source) === s ? 'selected' : ''}`;
-        tile.textContent = cfg.sourceNames?.[String(s)] || `Source ${s}`;
-        tile.addEventListener('click', async () => {
-          try {
-            const res = await fetch(`/api/zone/${zoneKey}/source`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: s }) });
-            if (!res.ok) throw new Error(await res.text());
-            zoneState[zoneKey] = zoneState[zoneKey] || {};
-            zoneState[zoneKey].source = s;
-            renderDetail(zoneKey);
-            renderList();
-            showError('');
-          } catch (err) { showError(`Source change failed for zone ${zoneKey}.`); console.error(err); }
-        });
-        sourceGrid.appendChild(tile);
-      }
-
-      const maxVol = zoneCfg.maxVolume ?? 38;
-      volumeValue.textContent = String(state.volume ?? 0);
-      volumeLabel.textContent = state.mute ? 'Volume · Muted' : 'Volume';
-
-      bassRange.value = String(state.bass ?? 0);
-      bassValue.textContent = `${Math.round(state.bass ?? 0)}`;
-      bassFill.style.width = `${((state.bass ?? 0) / 14) * 100}%`;
-
-      trebleRange.value = String(state.treble ?? 0);
-      trebleValue.textContent = `${Math.round(state.treble ?? 0)}`;
-      trebleFill.style.width = `${((state.treble ?? 0) / 14) * 100}%`;
-
-      balanceRange.value = String(state.balance ?? 10);
-      balanceFill.style.left = `${((state.balance ?? 10) / 20) * 100}%`;
-      balanceValueLabel.textContent = balanceLabel(Number(state.balance ?? 10));
-
-      autoOffToggle.className = `toggle ${automation.enabled ? 'on' : ''}`;
-      buildTimerOptions(autoOffTimer, zoneKey);
+      if (!cfg) return; const zoneCfg = cfg.zones?.[zoneKey] || {}; const state = zoneState[zoneKey] || { power: false, source: 1, volume: 0, bass: 0, treble: 0, balance: 10, mute: false }; const automation = ensureAutomationZone(zoneKey);
+      detailName.textContent = zoneCfg.name || `Zone ${zoneKey}`; sourceGrid.innerHTML = '';
+      for (let s = 1; s <= 6; s += 1) { const tile = document.createElement('button'); tile.type = 'button'; tile.className = `source-tile ${Number(state.source) === s ? 'selected' : ''}`; tile.textContent = cfg.sourceNames?.[String(s)] || `Source ${s}`; tile.addEventListener('click', async () => { try { const res = await fetch(`/api/zone/${zoneKey}/source`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: s }) }); if (!res.ok) throw new Error(await res.text()); const json = await res.json(); zoneState[zoneKey] = zoneState[zoneKey] || {}; zoneState[zoneKey].source = s; if (json.timer) timerState[zoneKey] = json.timer; renderDetail(zoneKey); renderList(); showError(''); } catch (err) { showError(`Source change failed for zone ${zoneKey}.`); console.error(err); } }); sourceGrid.appendChild(tile); }
+      volumeValue.textContent = String(state.volume ?? 0); volumeLabel.textContent = state.mute ? 'Volume · Muted' : 'Volume';
+      bassRange.value = String(state.bass ?? 0); bassValue.textContent = `${Math.round(state.bass ?? 0)}`; bassFill.style.width = `${((state.bass ?? 0) / 14) * 100}%`;
+      trebleRange.value = String(state.treble ?? 0); trebleValue.textContent = `${Math.round(state.treble ?? 0)}`; trebleFill.style.width = `${((state.treble ?? 0) / 14) * 100}%`;
+      balanceRange.value = String(state.balance ?? 10); balanceFill.style.left = `${((state.balance ?? 10) / 20) * 100}%`; balanceValueLabel.textContent = balanceLabel(Number(state.balance ?? 10));
+      autoOffToggle.className = `toggle ${automation.enabled ? 'on' : ''}`; buildTimerOptions(autoOffTimer, zoneKey); renderCountdown(zoneKey);
     }
-
-    function stepVolume(delta) {
-      const zoneKey = activeZone;
-      if (!zoneKey) return;
-      const zoneCfg = cfg.zones?.[zoneKey] || {};
-      const maxVol = zoneCfg.maxVolume ?? 38;
-      const current = zoneState[zoneKey]?.volume ?? 0;
-      let value = current + delta;
-      if (value < 0) value = 0;
-      if (value > maxVol) value = maxVol;
-      volumeValue.textContent = String(value);
-      zoneState[zoneKey] = zoneState[zoneKey] || {};
-      zoneState[zoneKey].volume = value;
-      if (volumeDebouncers[zoneKey]) clearTimeout(volumeDebouncers[zoneKey]);
-      volumeDebouncers[zoneKey] = setTimeout(async () => {
-        try {
-          const res = await fetch(`/api/zone/${zoneKey}/volume`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ volume: value }) });
-          if (!res.ok) throw new Error(await res.text());
-          renderList();
-          showError('');
-        } catch (err) { showError(`Volume change failed for zone ${zoneKey}.`); console.error(err); }
-      }, 260);
-    }
-
-    volumeDownBtn.addEventListener('click', () => stepVolume(-1));
-    volumeUpBtn.addEventListener('click', () => stepVolume(1));
-
-    bassRange.addEventListener('input', () => {
-      bassValue.textContent = `${parseInt(bassRange.value, 10)}`;
-      bassFill.style.width = `${(parseInt(bassRange.value, 10) / 14) * 100}%`;
-    });
-    bassRange.addEventListener('change', async () => {
-      if (!activeZone) return;
-      try {
-        const bass = parseInt(bassRange.value, 10) || 0;
-        const res = await fetch(`/api/zone/${activeZone}/bass`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bass }) });
-        if (!res.ok) throw new Error(await res.text());
-        zoneState[activeZone] = zoneState[activeZone] || {};
-        zoneState[activeZone].bass = bass;
-        showError('');
-      } catch (err) { showError(`Bass change failed for zone ${activeZone}.`); console.error(err); }
-    });
-
-    trebleRange.addEventListener('input', () => {
-      trebleValue.textContent = `${parseInt(trebleRange.value, 10)}`;
-      trebleFill.style.width = `${(parseInt(trebleRange.value, 10) / 14) * 100}%`;
-    });
-    trebleRange.addEventListener('change', async () => {
-      if (!activeZone) return;
-      try {
-        const treble = parseInt(trebleRange.value, 10) || 0;
-        const res = await fetch(`/api/zone/${activeZone}/treble`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ treble }) });
-        if (!res.ok) throw new Error(await res.text());
-        zoneState[activeZone] = zoneState[activeZone] || {};
-        zoneState[activeZone].treble = treble;
-        showError('');
-      } catch (err) { showError(`Treble change failed for zone ${activeZone}.`); console.error(err); }
-    });
-
-    balanceRange.addEventListener('input', () => {
-      const v = parseInt(balanceRange.value, 10) || 10;
-      balanceFill.style.left = `${(v / 20) * 100}%`;
-      balanceValueLabel.textContent = balanceLabel(v);
-    });
-    balanceRange.addEventListener('change', async () => {
-      if (!activeZone) return;
-      try {
-        const balance = parseInt(balanceRange.value, 10) || 10;
-        const res = await fetch(`/api/zone/${activeZone}/balance`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ balance }) });
-        if (!res.ok) throw new Error(await res.text());
-        zoneState[activeZone] = zoneState[activeZone] || {};
-        zoneState[activeZone].balance = balance;
-        showError('');
-      } catch (err) { showError(`Balance change failed for zone ${activeZone}.`); console.error(err); }
-    });
-
-    autoOffToggle.addEventListener('click', async () => {
-      if (!activeZone) return;
-      try {
-        const enabled = !ensureAutomationZone(activeZone).enabled;
-        ensureAutomationZone(activeZone).enabled = enabled;
-        await patchConfig({ automation: { zones: { [activeZone]: { enabled } } } });
-        autoOffToggle.className = `toggle ${enabled ? 'on' : ''}`;
-        showError('');
-      } catch (err) { showError(`Failed to update auto-off for zone ${activeZone}.`); console.error(err); }
-    });
-
-    autoOffTimer.addEventListener('change', async () => {
-      if (!activeZone) return;
-      try {
-        const minutes = parseInt(autoOffTimer.value, 10) || 120;
-        ensureAutomationZone(activeZone).minutes = minutes;
-        await patchConfig({ automation: { zones: { [activeZone]: { minutes } } } });
-        showError('');
-      } catch (err) { showError(`Failed to save timer for zone ${activeZone}.`); console.error(err); }
-    });
-
-    function renderSettings() {
-      if (!cfg) return;
-      settingsZoneList.innerHTML = '';
-      for (let z = 1; z <= 6; z += 1) {
-        const zoneKey = String(z);
-        const zoneCfg = cfg.zones?.[zoneKey] || {};
-        const row = document.createElement('div');
-        row.className = 'settings-row';
-        const input = document.createElement('input');
-        input.className = 'settings-input';
-        input.value = zoneCfg.name || `Zone ${zoneKey}`;
-        input.addEventListener('blur', async () => {
-          try {
-            const name = input.value.trim() || `Zone ${zoneKey}`;
-            cfg.zones[zoneKey] = cfg.zones[zoneKey] || {};
-            cfg.zones[zoneKey].name = name;
-            await patchConfig({ zones: { [zoneKey]: { name } } });
-            showError('');
-          } catch (err) { showError(`Failed to save zone ${zoneKey} name.`); console.error(err); }
-        });
-        input.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') input.blur(); });
-        const gearBtn = document.createElement('button');
-        gearBtn.type = 'button';
-        gearBtn.className = 'settings-icon-btn';
-        gearBtn.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1.1rem;height:1.1rem;stroke:currentColor;fill:none;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>';
-        gearBtn.setAttribute('aria-label', `Open ${zoneCfg.name || zoneKey} advanced settings`);
-        gearBtn.addEventListener('click', () => openDetail(zoneKey));
-        row.append(input, gearBtn);
-        settingsZoneList.appendChild(row);
-      }
-    }
-
+    function stepVolume(delta) { const zoneKey = activeZone; if (!zoneKey) return; const zoneCfg = cfg.zones?.[zoneKey] || {}; const maxVol = zoneCfg.maxVolume ?? 38; const current = zoneState[zoneKey]?.volume ?? 0; let value = current + delta; if (value < 0) value = 0; if (value > maxVol) value = maxVol; volumeValue.textContent = String(value); zoneState[zoneKey] = zoneState[zoneKey] || {}; zoneState[zoneKey].volume = value; if (volumeDebouncers[zoneKey]) clearTimeout(volumeDebouncers[zoneKey]); volumeDebouncers[zoneKey] = setTimeout(async () => { try { const res = await fetch(`/api/zone/${zoneKey}/volume`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ volume: value }) }); if (!res.ok) throw new Error(await res.text()); const json = await res.json(); if (json.timer) timerState[zoneKey] = json.timer; renderList(); renderCountdown(zoneKey); showError(''); } catch (err) { showError(`Volume change failed for zone ${zoneKey}.`); console.error(err); } }, 260); }
+    volumeDownBtn.addEventListener('click', () => stepVolume(-1)); volumeUpBtn.addEventListener('click', () => stepVolume(1));
+    bassRange.addEventListener('input', () => { bassValue.textContent = `${parseInt(bassRange.value, 10)}`; bassFill.style.width = `${(parseInt(bassRange.value, 10) / 14) * 100}%`; });
+    bassRange.addEventListener('change', async () => { if (!activeZone) return; try { const bass = parseInt(bassRange.value, 10) || 0; const res = await fetch(`/api/zone/${activeZone}/bass`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bass }) }); if (!res.ok) throw new Error(await res.text()); const json = await res.json(); zoneState[activeZone] = zoneState[activeZone] || {}; zoneState[activeZone].bass = bass; if (json.timer) timerState[activeZone] = json.timer; renderCountdown(activeZone); showError(''); } catch (err) { showError(`Bass change failed for zone ${activeZone}.`); console.error(err); } });
+    trebleRange.addEventListener('input', () => { trebleValue.textContent = `${parseInt(trebleRange.value, 10)}`; trebleFill.style.width = `${(parseInt(trebleRange.value, 10) / 14) * 100}%`; });
+    trebleRange.addEventListener('change', async () => { if (!activeZone) return; try { const treble = parseInt(trebleRange.value, 10) || 0; const res = await fetch(`/api/zone/${activeZone}/treble`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ treble }) }); if (!res.ok) throw new Error(await res.text()); const json = await res.json(); zoneState[activeZone] = zoneState[activeZone] || {}; zoneState[activeZone].treble = treble; if (json.timer) timerState[activeZone] = json.timer; renderCountdown(activeZone); showError(''); } catch (err) { showError(`Treble change failed for zone ${activeZone}.`); console.error(err); } });
+    balanceRange.addEventListener('input', () => { const v = parseInt(balanceRange.value, 10) || 10; balanceFill.style.left = `${(v / 20) * 100}%`; balanceValueLabel.textContent = balanceLabel(v); });
+    balanceRange.addEventListener('change', async () => { if (!activeZone) return; try { const balance = parseInt(balanceRange.value, 10) || 10; const res = await fetch(`/api/zone/${activeZone}/balance`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ balance }) }); if (!res.ok) throw new Error(await res.text()); const json = await res.json(); zoneState[activeZone] = zoneState[activeZone] || {}; zoneState[activeZone].balance = balance; if (json.timer) timerState[activeZone] = json.timer; renderCountdown(activeZone); showError(''); } catch (err) { showError(`Balance change failed for zone ${activeZone}.`); console.error(err); } });
+    autoOffToggle.addEventListener('click', async () => { if (!activeZone) return; try { const enabled = !ensureAutomationZone(activeZone).enabled; ensureAutomationZone(activeZone).enabled = enabled; await patchConfig({ automation: { zones: { [activeZone]: { enabled } } } }); await refreshTimers(); autoOffToggle.className = `toggle ${enabled ? 'on' : ''}`; renderCountdown(activeZone); showError(''); } catch (err) { showError(`Failed to update auto-off for zone ${activeZone}.`); console.error(err); } });
+    autoOffTimer.addEventListener('change', async () => { if (!activeZone) return; try { const minutes = parseInt(autoOffTimer.value, 10) || 120; ensureAutomationZone(activeZone).minutes = minutes; await patchConfig({ automation: { zones: { [activeZone]: { minutes } } } }); await refreshTimers(); renderCountdown(activeZone); showError(''); } catch (err) { showError(`Failed to save timer for zone ${activeZone}.`); console.error(err); } });
+    function renderSettings() { if (!cfg) return; settingsZoneList.innerHTML = ''; for (let z = 1; z <= 6; z += 1) { const zoneKey = String(z); const zoneCfg = cfg.zones?.[zoneKey] || {}; const row = document.createElement('div'); row.className = 'settings-row'; const input = document.createElement('input'); input.className = 'settings-input'; input.value = zoneCfg.name || `Zone ${zoneKey}`; input.addEventListener('blur', async () => { try { const name = input.value.trim() || `Zone ${zoneKey}`; cfg.zones[zoneKey] = cfg.zones[zoneKey] || {}; cfg.zones[zoneKey].name = name; await patchConfig({ zones: { [zoneKey]: { name } } }); showError(''); } catch (err) { showError(`Failed to save zone ${zoneKey} name.`); console.error(err); } }); input.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') input.blur(); }); const gearBtn = document.createElement('button'); gearBtn.type = 'button'; gearBtn.className = 'settings-icon-btn'; gearBtn.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1.1rem;height:1.1rem;stroke:currentColor;fill:none;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>'; gearBtn.setAttribute('aria-label', `Open ${zoneCfg.name || zoneKey} advanced settings`); gearBtn.addEventListener('click', () => openDetail(zoneKey)); row.append(input, gearBtn); settingsZoneList.appendChild(row); } }
     document.getElementById('openSettingsBtn').addEventListener('click', () => { renderSettings(); switchView('viewSettings'); setActiveTab('tabServer'); });
     document.getElementById('settingsBack').addEventListener('click', () => { switchView('viewList'); setActiveTab('tabZones'); });
     document.getElementById('detailBack').addEventListener('click', () => { activeZone = null; switchView('viewList'); setActiveTab('tabZones'); });
-
-    document.getElementById('allOffBtn').addEventListener('click', async () => {
-      try {
-        for (let z = 1; z <= 6; z += 1) {
-          const zoneKey = String(z);
-          if (zoneState[zoneKey]?.power) {
-            await fetch(`/api/zone/${zoneKey}/power`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: false }) });
-            zoneState[zoneKey].power = false;
-          }
-        }
-        renderList();
-        showError('');
-      } catch (err) { showError('Failed to turn off all zones.'); console.error(err); }
-    });
-
-    appTitleInput.addEventListener('blur', async () => {
-      const title = appTitleInput.value.trim() || 'Whole-Home Audio';
-      if (cfg && title === cfg.title) { showError(''); return; }
-      try {
-        await patchConfig({ title });
-        listTitle.textContent = title.toUpperCase();
-        document.title = title;
-        showError('');
-      } catch (err) {
-        showError(`Failed to save app title: ${err.message || 'unknown error'}`);
-        console.error('Title save failed', err);
-      }
-    });
+    document.getElementById('allOffBtn').addEventListener('click', async () => { try { for (let z = 1; z <= 6; z += 1) { const zoneKey = String(z); if (zoneState[zoneKey]?.power) { const res = await fetch(`/api/zone/${zoneKey}/power`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: false }) }); const json = await res.json(); zoneState[zoneKey].power = false; if (json.timer) timerState[zoneKey] = json.timer; } } renderList(); if (activeZone) renderDetail(activeZone); showError(''); } catch (err) { showError('Failed to turn off all zones.'); console.error(err); } });
+    appTitleInput.addEventListener('blur', async () => { const title = appTitleInput.value.trim() || 'Whole-Home Audio'; if (cfg && title === cfg.title) { showError(''); return; } try { await patchConfig({ title }); listTitle.textContent = title.toUpperCase(); document.title = title; showError(''); } catch (err) { showError(`Failed to save app title: ${err.message || 'unknown error'}`); console.error('Title save failed', err); } });
     appTitleInput.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') appTitleInput.blur(); });
-
-    document.getElementById('editSourcesFab').addEventListener('click', () => {
-      sourcesForm.innerHTML = '';
-      for (let s = 1; s <= 6; s += 1) {
-        const wrap = document.createElement('div');
-        wrap.className = 'sheet-field';
-        const label = document.createElement('label');
-        label.textContent = `Source ${s}`;
-        const input = document.createElement('input');
-        input.className = 'sheet-input';
-        input.value = cfg.sourceNames?.[String(s)] || `Source ${s}`;
-        input.dataset.source = String(s);
-        wrap.append(label, input);
-        sourcesForm.appendChild(wrap);
-      }
-      sourcesModalBackdrop.classList.add('open');
-    });
+    document.getElementById('editSourcesFab').addEventListener('click', () => { sourcesForm.innerHTML = ''; for (let s = 1; s <= 6; s += 1) { const wrap = document.createElement('div'); wrap.className = 'sheet-field'; const label = document.createElement('label'); label.textContent = `Source ${s}`; const input = document.createElement('input'); input.className = 'sheet-input'; input.value = cfg.sourceNames?.[String(s)] || `Source ${s}`; input.dataset.source = String(s); wrap.append(label, input); sourcesForm.appendChild(wrap); } sourcesModalBackdrop.classList.add('open'); });
     sourcesModalBackdrop.addEventListener('click', (ev) => { if (ev.target === sourcesModalBackdrop) sourcesModalBackdrop.classList.remove('open'); });
-    document.getElementById('sourcesSave').addEventListener('click', async () => {
-      try {
-        const sourceNames = {};
-        sourcesForm.querySelectorAll('input[data-source]').forEach((input) => { sourceNames[input.dataset.source] = input.value.trim() || `Source ${input.dataset.source}`; });
-        await patchConfig({ sourceNames });
-        sourcesModalBackdrop.classList.remove('open');
-        showError('');
-      } catch (err) { showError('Failed to save source names.'); console.error(err); }
-    });
-
-    function setActiveTab(id) {
-      ['tabServer', 'tabZones', 'tabSources'].forEach(t => document.getElementById(t).classList.remove('active'));
-      document.getElementById(id).classList.add('active');
-    }
+    document.getElementById('sourcesSave').addEventListener('click', async () => { try { const sourceNames = {}; sourcesForm.querySelectorAll('input[data-source]').forEach((input) => { sourceNames[input.dataset.source] = input.value.trim() || `Source ${input.dataset.source}`; }); await patchConfig({ sourceNames }); sourcesModalBackdrop.classList.remove('open'); showError(''); } catch (err) { showError('Failed to save source names.'); console.error(err); } });
+    function setActiveTab(id) { ['tabServer', 'tabZones', 'tabSources'].forEach(t => document.getElementById(t).classList.remove('active')); document.getElementById(id).classList.add('active'); }
     document.getElementById('tabServer').addEventListener('click', () => { renderSettings(); switchView('viewSettings'); setActiveTab('tabServer'); });
     document.getElementById('tabZones').addEventListener('click', () => { activeZone = null; switchView('viewList'); setActiveTab('tabZones'); });
     document.getElementById('tabSources').addEventListener('click', () => { document.getElementById('editSourcesFab').click(); setActiveTab('tabSources'); });
-
-    function tickClock() {
-      const now = new Date();
-      clockEl.textContent = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    }
-
-    async function bootstrap() {
-      try {
-        tickClock();
-        setInterval(tickClock, 30000);
-        await Promise.all([loadConfig(), refreshSerialStatus()]);
-        renderList();
-        renderSettings();
-        await loadAllZoneStateStaggered();
-        setInterval(() => loadConfig().then(() => { renderList(); renderSettings(); }).catch(console.error), 60000);
-        setInterval(loadAllZoneStateStaggered, 30000);
-        setInterval(refreshSerialStatus, 5000);
-      } catch (err) {
-        console.error('Bootstrap failed', err);
-        showError('Startup failed. Check browser console and backend logs.');
-      }
-    }
-
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrap);
-    else bootstrap();
+    function tickClock() { const now = new Date(); clockEl.textContent = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
+    function tickCountdowns() { Object.keys(timerState).forEach((zoneKey) => { const timer = timerState[zoneKey]; if (timer && timer.active && timer.remainingMs > 0) timer.remainingMs = Math.max(0, timer.remainingMs - 1000); if (timer && timer.active && timer.remainingMs === 0) timer.active = false; }); renderList(); if (activeZone) renderCountdown(activeZone); }
+    async function bootstrap() { try { tickClock(); setInterval(tickClock, 30000); await Promise.all([loadConfig(), refreshSerialStatus(), refreshTimers()]); renderList(); renderSettings(); await loadAllZoneStateStaggered(); setInterval(() => loadConfig().then(() => { renderList(); renderSettings(); if (activeZone) renderDetail(activeZone); }).catch(console.error), 60000); setInterval(loadAllZoneStateStaggered, 30000); setInterval(refreshSerialStatus, 5000); setInterval(refreshTimers, 10000); setInterval(tickCountdowns, 1000); } catch (err) { console.error('Bootstrap failed', err); showError('Startup failed. Check browser console and backend logs.'); } }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrap); else bootstrap();
   </script>
 </body>
 </html>
